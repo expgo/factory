@@ -114,6 +114,21 @@ func RangeStruct[T any](structFunc func(*T) bool) {
 	}
 }
 
+func FindStructs[T any]() (result []*T) {
+	vt := reflect.TypeOf((*T)(nil))
+
+	if vt.Elem().Kind() == reflect.Struct {
+		Range[T](func(v any) bool {
+			result = append(result, v.(*T))
+			return true
+		})
+	} else {
+		panic("Range type only range struct type")
+	}
+
+	return
+}
+
 func RangeInterface[T any](interfaceFunc func(T) bool) {
 	vt := reflect.TypeOf((*T)(nil))
 
@@ -124,6 +139,21 @@ func RangeInterface[T any](interfaceFunc func(T) bool) {
 	} else {
 		panic("Range inf only range interface type")
 	}
+}
+
+func FindInterfaces[T any]() (result []T) {
+	vt := reflect.TypeOf((*T)(nil))
+
+	if vt.Elem().Kind() == reflect.Interface {
+		Range[T](func(v any) bool {
+			result = append(result, v.(T))
+			return true
+		})
+	} else {
+		panic("Range inf only range interface type")
+	}
+
+	return
 }
 
 func (c *context) getByNameOrType(name string, vt reflect.Type) any {
