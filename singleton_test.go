@@ -18,6 +18,17 @@ type cat struct {
 	Name   string
 }
 
+type cat1 struct {
+	animal
+	Name string
+}
+
+func (c *cat1) Init() {
+	c.animal.Init()
+
+	c.Name = "cat1"
+}
+
 func (c *cat) Init() {
 	c.animal.Init()
 
@@ -49,4 +60,8 @@ func TestSingletonBuilder(t *testing.T) {
 
 	assert.Equal(t, "dog", d().Name)
 	assert.Equal(t, "dog", d().animal.Name)
+
+	var c1 = Singleton[cat1]().Getter()
+	assert.Equal(t, "cat1", c1().Name)
+	assert.Equal(t, "animal", c1().animal.Name)
 }
