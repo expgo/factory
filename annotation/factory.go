@@ -4,6 +4,7 @@ import (
 	"github.com/expgo/ag/api"
 	"github.com/expgo/factory"
 	"go/ast"
+	"strings"
 )
 
 func init() {
@@ -23,17 +24,20 @@ func (f *Factory) New(typedAnnotations []*api.TypedAnnotation) (api.Generator, e
 
 	for _, ta := range typedAnnotations {
 		if ta.Type == api.AnnotationTypeType {
-			if an := ta.Annotations.FindAnnotationByName(AnnotationSingleton.Val()); an != nil {
-				s := &Singleton{}
-				err := an.To(s)
-				if err != nil {
-					return nil, err
+			ts := ta.Node.(*ast.TypeSpec)
+
+			for _, an := range ta.Annotations.Annotations {
+				if strings.EqualFold(an.Name, AnnotationSingleton.Val()) {
+					s := &Singleton{}
+					err := an.To(s)
+					if err != nil {
+						return nil, err
+					}
+
+					s.typeName = ts.Name.Name
+
+					singletons = append(singletons, s)
 				}
-
-				ts := ta.Node.(*ast.TypeSpec)
-				s.typeName = ts.Name.Name
-
-				singletons = append(singletons, s)
 			}
 		}
 	}

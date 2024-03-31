@@ -11,7 +11,7 @@ type Annotation string
 
 type Singleton struct {
 	Name           string
-	NameOnly       bool `value:"false"`
+	NamedOnly      bool `value:"false"`
 	UseConstructor bool `value:"false"`
 	InitMethod     string
 	Init           []string

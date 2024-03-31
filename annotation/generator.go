@@ -25,7 +25,7 @@ func (g *Generator) WriteInitFunc(wr io.Writer) error {
 	buf.WriteString("func init() {")
 
 	for _, s := range g.singletons {
-		if s.NameOnly {
+		if s.NamedOnly {
 			if len(s.Name) == 0 {
 				return fmt.Errorf("%s's Singleton annotation must with name param", s.typeName)
 			}
