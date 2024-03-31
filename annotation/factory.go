@@ -2,15 +2,11 @@ package annotation
 
 import (
 	"github.com/expgo/ag/api"
-	"github.com/expgo/factory"
 	"go/ast"
 	"strings"
 )
 
-func init() {
-	factory.Singleton[Factory]()
-}
-
+// @Singleton
 type Factory struct{}
 
 func (f *Factory) Annotations() map[string][]api.AnnotationType {

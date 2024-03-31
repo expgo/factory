@@ -1,7 +1,5 @@
 package annotation
 
-//go:generate ag --plugin=github.com/expgo/enum
-
 /*
 	@Enum {
 		Singleton

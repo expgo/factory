@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-//go:generate bud
+//go:generate ag
 
 // WireTag is a constant that defines the annotation string used for wire injection in Go code.
 const WireTag = "wire"
