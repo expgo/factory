@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/expgo/ag/api"
+	"github.com/expgo/generic/stream"
 	"io"
 	"strings"
 )
@@ -68,5 +69,6 @@ func (g *Generator) WriteBody(wr io.Writer) error {
 }
 
 func newGenerator(singletons []*Singleton) (api.Generator, error) {
-	return &Generator{singletons}, nil
+	sorted := stream.Must(stream.Of(singletons).Sort(func(x, y *Singleton) int { return strings.Compare(x.typeName, y.typeName) }).ToSlice())
+	return &Generator{sorted}, nil
 }
