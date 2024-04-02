@@ -20,6 +20,7 @@ func (g *Generator) GetImports() []string {
 func (g *Generator) WriteConst(wr io.Writer) error {
 	return nil
 }
+
 func (g *Generator) WriteInitFunc(wr io.Writer) error {
 	buf := bytes.NewBuffer([]byte{})
 
@@ -52,6 +53,7 @@ func (g *Generator) WriteInitFunc(wr io.Writer) error {
 			for _, v := range s.Init {
 				quoted = append(quoted, fmt.Sprintf(`"%s"`, v))
 			}
+
 			buf.WriteString(fmt.Sprintf(`.InitParams(%s)`, strings.Join(quoted, ",")))
 		}
 
