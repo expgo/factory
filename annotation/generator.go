@@ -2,7 +2,6 @@ package annotation
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/expgo/ag/api"
 	"github.com/expgo/generic/stream"
 	"io"
@@ -18,52 +17,50 @@ func (g *Generator) GetImports() []string {
 }
 
 func (g *Generator) WriteConst(wr io.Writer) error {
+	if stream.Must(stream.Of(g.singletons).AnyMatch(func(s *Singleton) (bool, error) { return !s.LazyInit, nil })) {
+
+		buf := bytes.NewBuffer([]byte{})
+
+		buf.WriteString("var(\n")
+
+		for _, s := range g.singletons {
+			if !s.LazyInit {
+				if err := s.WriteString(buf); err != nil {
+					return err
+				}
+			}
+		}
+
+		buf.WriteString(")\n")
+
+		_, err := io.Copy(wr, buf)
+		return err
+	}
+
 	return nil
 }
 
 func (g *Generator) WriteInitFunc(wr io.Writer) error {
-	buf := bytes.NewBuffer([]byte{})
+	if stream.Must(stream.Of(g.singletons).AnyMatch(func(s *Singleton) (bool, error) { return s.LazyInit, nil })) {
+		buf := bytes.NewBuffer([]byte{})
 
-	buf.WriteString("func init() {")
+		buf.WriteString("func init() {\n")
 
-	for _, s := range g.singletons {
-		if s.NamedOnly {
-			if len(s.Name) == 0 {
-				return fmt.Errorf("%s's Singleton annotation must with name param", s.typeName)
-			}
-			buf.WriteString(fmt.Sprintf(`factory.NamedSingleton[%s]("%s")`, s.typeName, s.Name))
-		} else {
-			buf.WriteString(fmt.Sprintf(`factory.Singleton[%s]()`, s.typeName))
-			if len(s.Name) > 0 {
-				buf.WriteString(fmt.Sprintf(`.Name("%s")`, s.Name))
+		for _, s := range g.singletons {
+			if s.LazyInit {
+				if err := s.WriteString(buf); err != nil {
+					return err
+				}
 			}
 		}
 
-		if s.UseConstructor {
-			buf.WriteString(".UseConstructor(true)")
-		}
+		buf.WriteString("}\n")
 
-		if len(s.InitMethod) > 0 {
-			buf.WriteString(fmt.Sprintf(`.InitMethodName("%s")`, s.InitMethod))
-		}
-
-		if len(s.Init) > 0 {
-			var quoted []string
-
-			for _, v := range s.Init {
-				quoted = append(quoted, fmt.Sprintf(`"%s"`, v))
-			}
-
-			buf.WriteString(fmt.Sprintf(`.InitParams(%s)`, strings.Join(quoted, ",")))
-		}
-
-		buf.WriteString("\n")
+		_, err := io.Copy(wr, buf)
+		return err
 	}
 
-	buf.WriteString("}")
-
-	_, err := io.Copy(wr, buf)
-	return err
+	return nil
 }
 
 func (g *Generator) WriteBody(wr io.Writer) error {
