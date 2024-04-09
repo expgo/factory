@@ -2,6 +2,7 @@ package annotation
 
 import (
 	"github.com/expgo/ag/api"
+	"github.com/expgo/factory"
 	"go/ast"
 	"strings"
 )
@@ -24,7 +25,7 @@ func (f *Factory) New(typedAnnotations []*api.TypedAnnotation) (api.Generator, e
 
 			for _, an := range ta.Annotations.Annotations {
 				if strings.EqualFold(an.Name, AnnotationSingleton.Val()) {
-					s := &Singleton{}
+					s := factory.New[Singleton]()
 					err := an.To(s)
 					if err != nil {
 						return nil, err
