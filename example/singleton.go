@@ -4,3 +4,6 @@ package example
 
 // @Singleton(Init={"aaa", "bbb"})
 type MyStruct struct{}
+
+// @Singleton(Init={"aaa", "bbb"}, localVar)
+type LocalVarMyStruct struct{}

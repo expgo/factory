@@ -8,6 +8,10 @@ import (
 	"github.com/expgo/factory"
 )
 
+var (
+	__LocalVarMyStruct = factory.Singleton[LocalVarMyStruct]().InitParams("aaa", "bbb").Get()
+)
+
 func init() {
 	factory.Singleton[MyStruct]().InitParams("aaa", "bbb")
 }

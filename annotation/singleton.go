@@ -18,13 +18,14 @@ type Singleton struct {
 	NamedOnly      bool `value:"false"`
 	UseConstructor bool `value:"false"`
 	LazyInit       bool `value:"true"`
+	LocalVar       bool `value:"false"`
 	InitMethod     string
 	Init           []string
 	typeName       string
 }
 
 func (s *Singleton) WriteString(buf io.StringWriter) error {
-	if !s.LazyInit {
+	if s.LocalVar {
 		buf.WriteString(fmt.Sprintf("__%s = ", s.typeName))
 	}
 
@@ -58,7 +59,7 @@ func (s *Singleton) WriteString(buf io.StringWriter) error {
 		buf.WriteString(fmt.Sprintf(`.InitParams(%s)`, strings.Join(quoted, ",")))
 	}
 
-	if !s.LazyInit {
+	if s.LocalVar || !s.LazyInit {
 		buf.WriteString(".Get()")
 	}
 

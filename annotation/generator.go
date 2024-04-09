@@ -17,14 +17,14 @@ func (g *Generator) GetImports() []string {
 }
 
 func (g *Generator) WriteConst(wr io.Writer) error {
-	if stream.Must(stream.Of(g.singletons).AnyMatch(func(s *Singleton) (bool, error) { return !s.LazyInit, nil })) {
+	if stream.Must(stream.Of(g.singletons).AnyMatch(func(s *Singleton) (bool, error) { return s.LocalVar, nil })) {
 
 		buf := bytes.NewBuffer([]byte{})
 
 		buf.WriteString("var(\n")
 
 		for _, s := range g.singletons {
-			if !s.LazyInit {
+			if s.LocalVar {
 				if err := s.WriteString(buf); err != nil {
 					return err
 				}
@@ -41,13 +41,13 @@ func (g *Generator) WriteConst(wr io.Writer) error {
 }
 
 func (g *Generator) WriteInitFunc(wr io.Writer) error {
-	if stream.Must(stream.Of(g.singletons).AnyMatch(func(s *Singleton) (bool, error) { return s.LazyInit, nil })) {
+	if stream.Must(stream.Of(g.singletons).AnyMatch(func(s *Singleton) (bool, error) { return !s.LocalVar, nil })) {
 		buf := bytes.NewBuffer([]byte{})
 
 		buf.WriteString("func init() {\n")
 
 		for _, s := range g.singletons {
-			if s.LazyInit {
+			if !s.LocalVar {
 				if err := s.WriteString(buf); err != nil {
 					return err
 				}
