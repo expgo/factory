@@ -45,3 +45,7 @@ func (f *Factory) New(typedAnnotations []*api.TypedAnnotation) (api.Generator, e
 
 	return newGenerator(singletons)
 }
+
+func (f *Factory) Order() api.Order {
+	return api.OrderHigh
+}

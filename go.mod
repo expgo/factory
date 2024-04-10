@@ -3,9 +3,9 @@ module github.com/expgo/factory
 go 1.20
 
 require (
-	github.com/expgo/ag v0.0.0-20240330160442-604f1b53a7a8
-	github.com/expgo/generic v0.0.0-20240323131353-339c0d4e5e11
-	github.com/expgo/structure v0.0.0-20240330155600-da719deecafd
+	github.com/expgo/ag v0.0.0-20240410010220-b3ff2f5bfd5f
+	github.com/expgo/generic v0.0.0-20240409150052-f04fcb7e0fd5
+	github.com/expgo/structure v0.0.0-20240409145933-0849cfa62db1
 	github.com/expr-lang/expr v1.16.3
 	github.com/stretchr/testify v1.9.0
 )

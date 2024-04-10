@@ -15,10 +15,11 @@ type Annotation string
 
 type Singleton struct {
 	Name           string
-	NamedOnly      bool `value:"false"`
-	UseConstructor bool `value:"false"`
-	LazyInit       bool `value:"true"`
-	LocalVar       bool `value:"false"`
+	NamedOnly      bool   `value:"false"`
+	UseConstructor bool   `value:"false"`
+	LazyInit       bool   `value:"true"`
+	LocalVar       bool   `value:"false"`
+	LocalVarPrefix string `value:"__"`
 	InitMethod     string
 	Init           []string
 	typeName       string
@@ -26,7 +27,7 @@ type Singleton struct {
 
 func (s *Singleton) WriteString(buf io.StringWriter) error {
 	if s.LocalVar {
-		buf.WriteString(fmt.Sprintf("__%s = ", s.typeName))
+		buf.WriteString(fmt.Sprintf("%s%s = ", s.LocalVarPrefix, s.typeName))
 	}
 
 	if s.NamedOnly {
