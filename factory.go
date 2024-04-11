@@ -51,7 +51,7 @@ func checkFactoryValid(f any, vt reflect.Type) {
 	}
 }
 
-func RegisterFactory[T any](f any) {
+func Factory[T any](f any) {
 	vt := reflect.TypeOf((*T)(nil))
 	if vt.Elem().Kind() == reflect.Interface {
 		vt = vt.Elem()

@@ -43,14 +43,14 @@ func newMyInterface(t any) MyInterface {
 }
 
 func TestFactoryObject(t *testing.T) {
-	RegisterFactory[MyInterface](&MyFactory{})
+	Factory[MyInterface](&MyFactory{})
 
 	my := New[MyStruct]()
 	my.MI.Hello()
 }
 
 func TestFactoryMethod(t *testing.T) {
-	RegisterFactory[MyInterface](newMyInterface)
+	Factory[MyInterface](newMyInterface)
 
 	my := New[MyStruct]()
 	my.MI.Hello()
