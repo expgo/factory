@@ -69,30 +69,32 @@ func New[T any]() *T {
 	return NewWithOption[T](newDefaultOption)
 }
 
-func _getInitParams(self any, initMethod reflect.Method, option *Option) ([]reflect.Value, error) {
+func _getMethodParams(self any, methodType reflect.Type, methodParams []string, methodName string) ([]reflect.Value, error) {
 	var params []reflect.Value
 
-	if len(option.initParams) == 0 {
-		for i := 1; i < initMethod.Type.NumIn(); i++ {
-			paramType := initMethod.Type.In(i)
+	baseIndex := methodType.NumIn() - len(methodParams)
+
+	if len(methodParams) == 0 {
+		for i := 1; i < methodType.NumIn(); i++ {
+			paramType := methodType.In(i)
 			if (paramType.Kind() == reflect.Ptr && paramType.Elem().Kind() == reflect.Struct) || paramType.Kind() == reflect.Interface {
 				params = append(params, reflect.ValueOf(_context.getByType(paramType)))
 			} else {
-				return nil, errors.New(fmt.Sprintf("Method %s's %d argument must be a struct point or an interface", initMethod.Name, i))
+				return nil, errors.New(fmt.Sprintf("Method %s's %d argument must be a struct point or an interface", methodName, i))
 			}
 		}
-	} else if len(option.initParams)+1 == initMethod.Type.NumIn() {
-		for i := 0; i < initMethod.Type.NumIn()-1; i++ {
-			paramType := initMethod.Type.In(i + 1)
+	} else if baseIndex == 0 || baseIndex == 1 {
+		for i := 0; i < methodType.NumIn()-baseIndex; i++ {
+			paramType := methodType.In(i + baseIndex)
 
-			tagValue, err := ParseTagValue(option.initParams[i], nil)
+			tagValue, err := ParseTagValue(methodParams[i], nil)
 			if err != nil {
-				return nil, errors.New(fmt.Sprintf("Method %s's %d argument tag is err: %v", initMethod.Name, i+1, err))
+				return nil, errors.New(fmt.Sprintf("Method %s's %d argument tag is err: %v", methodName, i+baseIndex, err))
 			}
 
 			v, err := getValueByWireTag(self, tagValue, paramType)
 			if err != nil {
-				return nil, errors.New(fmt.Sprintf("Method %s's %d argument get value from tag err: %v", initMethod.Name, i+1, err))
+				return nil, errors.New(fmt.Sprintf("Method %s's %d argument get value from tag err: %v", methodName, i+baseIndex, err))
 			}
 
 			params = append(params, reflect.ValueOf(v))
@@ -135,7 +137,7 @@ func NewWithOption[T any](option *Option) *T {
 				panic(fmt.Sprintf("Init method '%s' must not have return values", initMethodName))
 			}
 
-			params, err := _getInitParams(t, initMethod, option)
+			params, err := _getMethodParams(t, initMethod.Type, option.initParams, initMethod.Name)
 			if err == nil {
 				defer initMethod.Func.Call(append([]reflect.Value{reflect.ValueOf(t)}, params...))
 			} else {

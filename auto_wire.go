@@ -12,28 +12,26 @@ import (
 
 //go:generate ag
 
-// WireTag is a constant that defines the annotation string used for wire injection in Go code.
-const WireTag = "wire"
-
-// ValueTag is a shortcut of wire:"value:"
-const ValueTag = "value"
+// Tag is an enum
+// @Enum{wire, value, new}
+type Tag string
 
 // WireValue is an enum
 // @EnumConfig(marshal, values, noComments, noCase)
 // @Enum{self, auto, type, name, value}
 type WireValue string
 
-type TagValue[T any] struct {
+type TagWithValue[T any] struct {
 	Tag   T
 	Value string
 }
 
-func (tv *TagValue[T]) String() string {
+func (tv *TagWithValue[T]) String() string {
 	return fmt.Sprintf("%v:%s", tv.Tag, tv.Value)
 }
 
-func ParseTagValue(tagValue string, checkAndSet func(tv *TagValue[WireValue])) (tv *TagValue[WireValue], err error) {
-	result := &TagValue[WireValue]{}
+func ParseTagValue(tagValue string, checkAndSet func(tv *TagWithValue[WireValue])) (tv *TagWithValue[WireValue], err error) {
+	result := &TagWithValue[WireValue]{}
 	values := stream.Must(stream.Of(strings.SplitN(strings.TrimSpace(tagValue), ":", 2)).
 		Map(func(s string) (string, error) { return strings.TrimSpace(s), nil }).
 		Filter(func(s string) (bool, error) { return len(s) > 0, nil }).ToSlice())
@@ -80,7 +78,7 @@ func getExpr(value string) (exprCode string, isExpr bool) {
 	return value, false
 }
 
-func getValueByWireTag(self any, tagValue *TagValue[WireValue], t reflect.Type) (any, error) {
+func getValueByWireTag(self any, tagValue *TagWithValue[WireValue], t reflect.Type) (any, error) {
 	switch tagValue.Tag {
 	case WireValueSelf, WireValueAuto, WireValueType, WireValueName:
 		if (t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Struct) || t.Kind() == reflect.Interface {
@@ -136,22 +134,31 @@ func AutoWire(self any) error {
 	_context.wiring(vt)
 	defer _context.wired(vt)
 
-	return structure.WalkWithTagNames(self, []string{WireTag, ValueTag}, func(fieldValue reflect.Value, structField reflect.StructField, rootValues []reflect.Value, tags map[string]string) (err error) {
+	return structure.WalkWithTagNames(self, []string{TagWire.Name(), TagValue.Name(), TagNew.Name()}, func(fieldValue reflect.Value, structField reflect.StructField, rootValues []reflect.Value, tags map[string]string) (err error) {
 		if len(tags) > 1 {
 			panic("Only one can exist at a time, either 'wire' or 'value'.")
 		}
 
-		var tv *TagValue[WireValue]
-		if wireValue, ok := tags[WireTag]; ok {
-			tv, err = ParseTagValue(wireValue, func(tv *TagValue[WireValue]) {
+		if newValue, ok := tags[TagNew.Name()]; ok {
+			// new， create by factory
+			f, loaded := factories.Load(structField.Type)
+			if !loaded {
+				return fmt.Errorf("can't get factory type of %s", structField.Type.String())
+			}
+			return callFactory(f, self, fieldValue, structField, strings.Split(newValue, ","))
+		}
+
+		var tv *TagWithValue[WireValue]
+		if wireValue, ok := tags[TagWire.Name()]; ok {
+			tv, err = ParseTagValue(wireValue, func(tv *TagWithValue[WireValue]) {
 				if (tv.Tag == WireValueName && len(tv.Value) == 0) ||
 					(tv.Tag == WireValueAuto) {
 					tv.Value = structField.Name
 				}
 			})
 		}
-		if wireValue, ok := tags[ValueTag]; ok {
-			tv = &TagValue[WireValue]{Tag: WireValueValue, Value: wireValue}
+		if wireValue, ok := tags[TagValue.Name()]; ok {
+			tv = &TagWithValue[WireValue]{Tag: WireValueValue, Value: wireValue}
 		}
 
 		if err != nil {

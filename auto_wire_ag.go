@@ -11,12 +11,62 @@ import (
 )
 
 const (
+	// TagWire is a Tag of type wire.
+	TagWire Tag = "wire"
+	// TagValue is a Tag of type value.
+	TagValue Tag = "value"
+	// TagNew is a Tag of type new.
+	TagNew Tag = "new"
+)
+
+const (
 	WireValueSelf  WireValue = "self"
 	WireValueAuto  WireValue = "auto"
 	WireValueType  WireValue = "type"
 	WireValueName  WireValue = "name"
 	WireValueValue WireValue = "value"
 )
+
+var ErrInvalidTag = errors.New("not a valid Tag")
+
+var _TagNameMap = map[string]Tag{
+	"wire":  TagWire,
+	"value": TagValue,
+	"new":   TagNew,
+}
+
+// Name is the attribute of Tag.
+func (x Tag) Name() string {
+	if v, ok := _TagNameMap[string(x)]; ok {
+		return string(v)
+	}
+	return fmt.Sprintf("Tag(%s).Name", string(x))
+}
+
+// Val is the attribute of Tag.
+func (x Tag) Val() string {
+	return string(x)
+}
+
+// IsValid provides a quick way to determine if the typed value is
+// part of the allowed enumerated values
+func (x Tag) IsValid() bool {
+	_, ok := _TagNameMap[string(x)]
+	return ok
+}
+
+// String implements the Stringer interface.
+func (x Tag) String() string {
+	return x.Name()
+}
+
+// ParseTag converts a string to a Tag.
+func ParseTag(value string) (Tag, error) {
+	if x, ok := _TagNameMap[value]; ok {
+		return x, nil
+	}
+	return "", fmt.Errorf("%s is %w", value, ErrInvalidTag)
+}
 
 var ErrInvalidWireValue = errors.New("not a valid WireValue")
 
