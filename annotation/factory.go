@@ -1,4 +1,6 @@
 package annotation
 
-// TODO
-type Factory struct{}
+type Factory struct {
+	funcName   string
+	funcReturn string
+}

@@ -2,6 +2,7 @@ package annotation
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/expgo/ag/api"
 	"github.com/expgo/generic/stream"
 	"io"
@@ -10,6 +11,7 @@ import (
 
 type PluginGenerator struct {
 	singletons []*Singleton
+	factories  []*Factory
 }
 
 func (g *PluginGenerator) GetImports() []string {
@@ -41,10 +43,15 @@ func (g *PluginGenerator) WriteConst(wr io.Writer) error {
 }
 
 func (g *PluginGenerator) WriteInitFunc(wr io.Writer) error {
-	if stream.Must(stream.Of(g.singletons).AnyMatch(func(s *Singleton) (bool, error) { return !s.LocalVar, nil })) {
+	if stream.Must(stream.Of(g.singletons).AnyMatch(func(s *Singleton) (bool, error) { return !s.LocalVar, nil })) ||
+		len(g.factories) > 0 {
 		buf := bytes.NewBuffer([]byte{})
 
 		buf.WriteString("func init() {\n")
+
+		for _, f := range g.factories {
+			buf.WriteString(fmt.Sprintf(`factory.Factory[%s](%s)`, f.funcReturn, f.funcName) + "\n")
+		}
 
 		for _, s := range g.singletons {
 			if !s.LocalVar {
@@ -67,7 +74,8 @@ func (g *PluginGenerator) WriteBody(wr io.Writer) error {
 	return nil
 }
 
-func newGenerator(singletons []*Singleton) (api.Generator, error) {
-	sorted := stream.Must(stream.Of(singletons).Sort(func(x, y *Singleton) int { return strings.Compare(x.typeName, y.typeName) }).ToSlice())
-	return &PluginGenerator{sorted}, nil
+func newGenerator(singletons []*Singleton, factories []*Factory) (api.Generator, error) {
+	sortedSingletons := stream.Must(stream.Of(singletons).Sort(func(x, y *Singleton) int { return strings.Compare(x.typeName, y.typeName) }).ToSlice())
+	sortedFactories := stream.Must(stream.Of(factories).Sort(func(x, y *Factory) int { return strings.Compare(x.funcName, y.funcName) }).ToSlice())
+	return &PluginGenerator{sortedSingletons, sortedFactories}, nil
 }
