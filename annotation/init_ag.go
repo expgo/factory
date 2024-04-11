@@ -15,6 +15,8 @@ import (
 const (
 	// AnnotationSingleton is an Annotation of type Singleton.
 	AnnotationSingleton Annotation = "Singleton"
+	// AnnotationFactory is an Annotation of type Factory.
+	AnnotationFactory Annotation = "Factory"
 )
 
 func init() {
@@ -25,6 +27,7 @@ var ErrInvalidAnnotation = errors.New("not a valid Annotation")
 
 var _AnnotationNameMap = map[string]Annotation{
 	"Singleton": AnnotationSingleton,
+	"Factory":   AnnotationFactory,
 }
 
 // Name is the attribute of Annotation.

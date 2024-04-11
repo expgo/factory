@@ -13,6 +13,7 @@ type PluginFactory struct{}
 func (f *PluginFactory) Annotations() map[string][]api.AnnotationType {
 	return map[string][]api.AnnotationType{
 		AnnotationSingleton.Val(): {api.AnnotationTypeType},
+		AnnotationFactory.Val():   {api.AnnotationTypeType, api.AnnotationTypeFunc},
 	}
 }
 

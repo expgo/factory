@@ -6,13 +6,6 @@ import (
 	"strings"
 )
 
-/*
-	@Enum {
-		Singleton
-	}
-*/
-type Annotation string
-
 type Singleton struct {
 	Name           string
 	NamedOnly      bool   `value:"false"`
