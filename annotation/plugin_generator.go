@@ -8,15 +8,15 @@ import (
 	"strings"
 )
 
-type Generator struct {
+type PluginGenerator struct {
 	singletons []*Singleton
 }
 
-func (g *Generator) GetImports() []string {
+func (g *PluginGenerator) GetImports() []string {
 	return []string{"github.com/expgo/factory"}
 }
 
-func (g *Generator) WriteConst(wr io.Writer) error {
+func (g *PluginGenerator) WriteConst(wr io.Writer) error {
 	if stream.Must(stream.Of(g.singletons).AnyMatch(func(s *Singleton) (bool, error) { return s.LocalVar, nil })) {
 
 		buf := bytes.NewBuffer([]byte{})
@@ -40,7 +40,7 @@ func (g *Generator) WriteConst(wr io.Writer) error {
 	return nil
 }
 
-func (g *Generator) WriteInitFunc(wr io.Writer) error {
+func (g *PluginGenerator) WriteInitFunc(wr io.Writer) error {
 	if stream.Must(stream.Of(g.singletons).AnyMatch(func(s *Singleton) (bool, error) { return !s.LocalVar, nil })) {
 		buf := bytes.NewBuffer([]byte{})
 
@@ -63,11 +63,11 @@ func (g *Generator) WriteInitFunc(wr io.Writer) error {
 	return nil
 }
 
-func (g *Generator) WriteBody(wr io.Writer) error {
+func (g *PluginGenerator) WriteBody(wr io.Writer) error {
 	return nil
 }
 
 func newGenerator(singletons []*Singleton) (api.Generator, error) {
 	sorted := stream.Must(stream.Of(singletons).Sort(func(x, y *Singleton) int { return strings.Compare(x.typeName, y.typeName) }).ToSlice())
-	return &Generator{sorted}, nil
+	return &PluginGenerator{sorted}, nil
 }

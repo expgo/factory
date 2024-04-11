@@ -8,15 +8,15 @@ import (
 )
 
 // @Singleton
-type Factory struct{}
+type PluginFactory struct{}
 
-func (f *Factory) Annotations() map[string][]api.AnnotationType {
+func (f *PluginFactory) Annotations() map[string][]api.AnnotationType {
 	return map[string][]api.AnnotationType{
 		AnnotationSingleton.Val(): {api.AnnotationTypeType},
 	}
 }
 
-func (f *Factory) New(typedAnnotations []*api.TypedAnnotation) (api.Generator, error) {
+func (f *PluginFactory) New(typedAnnotations []*api.TypedAnnotation) (api.Generator, error) {
 	singletons := []*Singleton{}
 
 	for _, ta := range typedAnnotations {
@@ -46,6 +46,6 @@ func (f *Factory) New(typedAnnotations []*api.TypedAnnotation) (api.Generator, e
 	return newGenerator(singletons)
 }
 
-func (f *Factory) Order() api.Order {
+func (f *PluginFactory) Order() api.Order {
 	return api.OrderHigh
 }

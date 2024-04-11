@@ -18,7 +18,7 @@ const (
 )
 
 func init() {
-	factory.Singleton[Factory]()
+	factory.Singleton[PluginFactory]()
 }
 
 var ErrInvalidAnnotation = errors.New("not a valid Annotation")
