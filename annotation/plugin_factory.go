@@ -18,6 +18,17 @@ func (f *PluginFactory) Annotations() map[string][]api.AnnotationType {
 	}
 }
 
+func getTypeString(t ast.Expr) string {
+	switch x := t.(type) {
+	case *ast.Ident:
+		return x.Name
+	case *ast.StarExpr:
+		return getTypeString(x.X)
+	default:
+		return ""
+	}
+}
+
 func (f *PluginFactory) New(typedAnnotations []*api.TypedAnnotation) (api.Generator, error) {
 	singletons := []*Singleton{}
 	factories := []*Factory{}
@@ -57,7 +68,12 @@ func (f *PluginFactory) New(typedAnnotations []*api.TypedAnnotation) (api.Genera
 						return nil, fmt.Errorf("%s's return only be one", fac.funcName)
 					}
 
-					fac.funcReturn = fd.Type.Results.List[0].Type.(*ast.Ident).Name
+					fac.funcReturn = getTypeString(fd.Type.Results.List[0].Type)
+
+					if fd.Recv != nil {
+						fac.structName = getTypeString(fd.Recv.List[0].Type)
+						fac.isFunc = false
+					}
 
 					factories = append(factories, fac)
 				}

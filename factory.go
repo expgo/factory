@@ -9,22 +9,36 @@ import (
 
 const NewMethodName = "New"
 
-type FactoryMethodName interface {
-	NewMethodName() string
+var factories = generic.Map[reflect.Type, *_factory]{}
+
+type _factory struct {
+	factory     any
+	factoryType reflect.Type
+	returnType  reflect.Type
+	methodName  string
+	params      []string
 }
 
-var factories = generic.Map[reflect.Type, any]{}
-
-func getNewMethodName(f any) string {
-	newMethodName := NewMethodName
-	if fmn, ok := f.(FactoryMethodName); ok {
-		newMethodName = fmn.NewMethodName()
+func (f *_factory) MethodName(methodName string) *_factory {
+	if f.factoryType.Kind() == reflect.Func {
+		panic("factory is func, couldn't call MethodName")
 	}
-	return newMethodName
+
+	if len(methodName) > 0 {
+		f.methodName = methodName
+	}
+
+	return f
 }
 
-func checkFactoryValid(f any, vt reflect.Type) {
-	ft := reflect.TypeOf(f)
+func (f *_factory) Params(params ...string) *_factory {
+	f.params = params
+	return f
+}
+
+func (f *_factory) CheckValid() {
+	ft := f.factoryType
+	vt := f.returnType
 	if ft.Kind() == reflect.Func {
 		if ft.NumOut() != 1 {
 			panic(fmt.Errorf("func factory must return one value: %s", vt.String()))
@@ -33,8 +47,12 @@ func checkFactoryValid(f any, vt reflect.Type) {
 		if !ft.Out(0).AssignableTo(vt) {
 			panic("func factory's return can't assign to the register type")
 		}
+
+		if ft.NumIn() != len(f.params) {
+			panic("func factory params is not equals with params in")
+		}
 	} else if ft.Kind() == reflect.Ptr && ft.Elem().Kind() == reflect.Struct {
-		newMethod, ok := ft.MethodByName(getNewMethodName(f))
+		newMethod, ok := ft.MethodByName(f.methodName)
 		if !ok {
 			panic(fmt.Errorf("can't find new method from factory of type %s", vt.String()))
 		}
@@ -46,29 +64,45 @@ func checkFactoryValid(f any, vt reflect.Type) {
 		if !newMethod.Type.Out(0).AssignableTo(vt) {
 			panic("*struct factory's return can't assign to the register type")
 		}
+
+		if newMethod.Type.NumIn() != len(f.params)+1 {
+			panic("*struct factory params is not equals with params in")
+		}
 	} else {
 		panic(fmt.Errorf("factory %s input must be a *struct or a func", vt.String()))
 	}
 }
 
-func Factory[T any](f any) {
+func Factory[T any](f any) *_factory {
 	vt := reflect.TypeOf((*T)(nil))
 	if vt.Elem().Kind() == reflect.Interface {
 		vt = vt.Elem()
 	}
 
-	checkFactoryValid(f, vt)
-	_, loaded := factories.LoadOrStore(vt, f)
+	fac := &_factory{
+		factory:     f,
+		factoryType: reflect.TypeOf(f),
+		returnType:  vt,
+		methodName:  NewMethodName,
+	}
+
+	_, loaded := factories.LoadOrStore(vt, fac)
 	if loaded {
 		panic(fmt.Errorf("factory already exist: %s", vt.String()))
 	}
+
+	return fac
 }
 
-func callFactory(f any, self any, fieldValue reflect.Value, structField reflect.StructField, newParams []string) error {
-	vt := reflect.TypeOf(f)
+func callFactory(f *_factory, self any, fieldValue reflect.Value, structField reflect.StructField, newParams []string) error {
+	vt := f.factoryType
+
+	if newParams == nil || len(newParams) != len(f.params) {
+		newParams = f.params
+	}
 
 	if vt.Kind() == reflect.Func {
-		funcValue := reflect.ValueOf(f)
+		funcValue := reflect.ValueOf(f.factory)
 		funcType := funcValue.Type()
 
 		params, err := _getMethodParams(self, funcType, newParams, funcType.Name())
@@ -80,7 +114,7 @@ func callFactory(f any, self any, fieldValue reflect.Value, structField reflect.
 
 		return structure.SetField(fieldValue, values[0].Interface())
 	} else {
-		newMethod, ok := vt.MethodByName(getNewMethodName(f))
+		newMethod, ok := vt.MethodByName(f.methodName)
 		if ok {
 			if newMethod.Type.NumOut() != 1 {
 				panic("new method must only return one value")
@@ -91,7 +125,7 @@ func callFactory(f any, self any, fieldValue reflect.Value, structField reflect.
 				panic(fmt.Sprintf("factory new %s error: %v", structField.Type.String(), err))
 			}
 
-			values := newMethod.Func.Call(append([]reflect.Value{reflect.ValueOf(f)}, params...))
+			values := newMethod.Func.Call(append([]reflect.Value{reflect.ValueOf(f.factory)}, params...))
 
 			return structure.SetField(fieldValue, values[0].Interface())
 		}

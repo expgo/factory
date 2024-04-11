@@ -9,5 +9,6 @@ import (
 )
 
 func init() {
-	factory.Factory[Interface](Create)
+	factory.Factory[StructInterface](factory.New[MyStructFactory]()).MethodName("New1").Params("self").CheckValid()
+	factory.Factory[FuncInterface](newMyInterface).Params("self").CheckValid()
 }

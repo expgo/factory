@@ -145,7 +145,12 @@ func AutoWire(self any) error {
 			if !loaded {
 				return fmt.Errorf("can't get factory type of %s", structField.Type.String())
 			}
-			return callFactory(f, self, fieldValue, structField, strings.Split(newValue, ","))
+			newValue = strings.TrimSpace(newValue)
+			if len(newValue) > 0 {
+				return callFactory(f, self, fieldValue, structField, strings.Split(newValue, ","))
+			} else {
+				return callFactory(f, self, fieldValue, structField, nil)
+			}
 		}
 
 		var tv *TagWithValue[WireValue]

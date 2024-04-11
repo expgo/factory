@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/expgo/ag/api"
+	"github.com/expgo/factory"
 	"github.com/expgo/generic/stream"
 	"io"
 	"strings"
@@ -50,7 +51,26 @@ func (g *PluginGenerator) WriteInitFunc(wr io.Writer) error {
 		buf.WriteString("func init() {\n")
 
 		for _, f := range g.factories {
-			buf.WriteString(fmt.Sprintf(`factory.Factory[%s](%s)`, f.funcReturn, f.funcName) + "\n")
+			if f.isFunc {
+				buf.WriteString(fmt.Sprintf(`factory.Factory[%s](%s)`, f.funcReturn, f.funcName))
+			} else {
+				buf.WriteString(fmt.Sprintf(`factory.Factory[%s](factory.New[%s]())`, f.funcReturn, f.structName))
+				if f.funcName != factory.NewMethodName {
+					buf.WriteString(fmt.Sprintf(`.MethodName("%s")`, f.funcName))
+				}
+			}
+
+			if len(f.Params) > 0 {
+				var quoted []string
+
+				for _, p := range f.Params {
+					quoted = append(quoted, fmt.Sprintf(`"%s"`, p))
+				}
+
+				buf.WriteString(fmt.Sprintf(`.Params(%s)`, strings.Join(quoted, ",")))
+			}
+
+			buf.WriteString(".CheckValid()\n")
 		}
 
 		for _, s := range g.singletons {

@@ -1,27 +1,62 @@
 package example
 
-import "reflect"
+import (
+	"fmt"
+	"reflect"
+)
 
 //go:generate ag --dev-plugin=github.com/expgo/factory/annotation --dev-plugin-dir=../
 
-type Interface interface {
-	Hello() string
+type StructInterface interface {
+	Hello()
 }
 
-type MyInterface struct {
-	Type string
+type FactoryStruct struct {
+	typeName string
 }
 
-func (mi *MyInterface) Hello() string {
-	return "Hello " + mi.Type
+func (fs *FactoryStruct) Hello() {
+	fmt.Printf("Hello %s", fs.typeName)
 }
 
-// @Factory
-func Create(self any) Interface {
-	vt := reflect.TypeOf(self)
+type UseFactoryStruct struct {
+	MI StructInterface `new:""`
+}
+
+type MyStructFactory struct{}
+
+// @Factory(params="self")
+func (mf MyStructFactory) New1(t any) StructInterface {
+	vt := reflect.TypeOf(t)
 	if vt.Kind() == reflect.Ptr {
 		vt = vt.Elem()
 	}
 
-	return &MyInterface{Type: vt.PkgPath() + "/" + vt.Name()}
+	return &FactoryStruct{typeName: "struct: " + vt.PkgPath() + "/" + vt.Name()}
+}
+
+type FuncInterface interface {
+	Hello1()
+}
+
+type FuncStruct struct {
+	typeName string
+}
+
+func (fs *FuncStruct) Hello1() {
+	fmt.Printf("Hello %s", fs.typeName)
+}
+
+type UseFuncStruct struct {
+	MI FuncInterface `new:""`
+}
+
+// @Factory(params="self")
+func newMyInterface(t any) FuncInterface {
+	vt := reflect.TypeOf(t)
+	if vt.Kind() == reflect.Ptr {
+		vt = vt.Elem()
+	}
+
+	return &FuncStruct{typeName: "func: " + vt.PkgPath() + "/" + vt.Name()}
 }
