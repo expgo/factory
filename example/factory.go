@@ -5,7 +5,7 @@ import (
 	"reflect"
 )
 
-//go:generate ag --dev-plugin=github.com/expgo/factory/annotation --dev-plugin-dir=../
+//go:generate ag --dev-plugin=github.com/expgo/factory/annotation
 
 type StructInterface interface {
 	Hello()

@@ -1,6 +1,6 @@
 package example
 
-//go:generate ag --dev-plugin=github.com/expgo/factory/annotation --dev-plugin-dir=../
+//go:generate ag --dev-plugin=github.com/expgo/factory/annotation
 
 // @Singleton(Init={"aaa", "bbb"})
 type MyStruct struct{}
