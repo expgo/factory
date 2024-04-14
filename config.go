@@ -6,6 +6,7 @@ import (
 )
 
 const TimeoutKey = "Timeout"
+const GettingKey = "Getting"
 
 var Opts = struct {
 	EnableTimeout          bool

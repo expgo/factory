@@ -97,7 +97,7 @@ func getValueByWireTag(ctx context.Context, self any, tagValue *TagWithValue[Wir
 				return _context.getByType(ctx, t), nil
 			case WireValueName:
 				if len(tagValue.Value) > 0 {
-					return _context.getByName(ctx, tagValue.Value), nil
+					return _context.getByNamePanic(ctx, tagValue.Value, t), nil
 				}
 			}
 		} else {

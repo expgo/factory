@@ -1,6 +1,9 @@
 package factory
 
-import "testing"
+import (
+	"errors"
+	"testing"
+)
 
 func init() {
 	Singleton[testRepo]()
@@ -10,17 +13,17 @@ type testRepo struct {
 }
 
 func (tp *testRepo) Hello() {
-	panic("test repo hello called")
+	panic(errors.New("test repo hello called"))
 }
 
 type testStruct struct{}
 
 func (ts *testStruct) TestStruct() {
-	panic("constructor called")
+	panic(errors.New("constructor called"))
 }
 
 func (ts *testStruct) Init() {
-	panic("init called")
+	panic(errors.New("init called"))
 }
 
 func (ts *testStruct) InitWithReturn() error {
@@ -45,37 +48,37 @@ func TestNewWithOption(t *testing.T) {
 	test_cases := []struct {
 		name          string
 		option        *Option
-		expectedPanic string
+		expectedPanic error
 		expectError   bool
 	}{
 		{
 			name:          "OptionWithInitMethod",
 			option:        NewOption().UseConstructor(true),
-			expectedPanic: "constructor called",
+			expectedPanic: errors.New("constructor called"),
 			expectError:   true,
 		},
 		{
 			name:          "OptionWithNonexistentMethod",
 			option:        NewOption().InitMethodName("NonExistentMethodName"),
-			expectedPanic: "",
+			expectedPanic: errors.New(""),
 			expectError:   false,
 		},
 		{
 			name:          "OptionWithInitWithReturn",
 			option:        &Option{useConstructor: false, initMethodName: "InitWithReturn"},
-			expectedPanic: "Init method 'InitWithReturn' must not have return values",
+			expectedPanic: errors.New("Init method 'InitWithReturn' must not have return values"),
 			expectError:   true,
 		},
 		{
 			name:          "OptionWithMyInitMethodWithWareObjParams",
 			option:        &Option{useConstructor: false, initMethodName: "MyInit"},
-			expectedPanic: "test repo hello called",
+			expectedPanic: errors.New("test repo hello called"),
 			expectError:   true,
 		},
 		{
 			name:          "OptionWithMyInitMethodWithWareObjErrorParams",
 			option:        &Option{useConstructor: false, initMethodName: "MyErrorInit"},
-			expectedPanic: "Create testStruct error: Method MyErrorInit's 1 argument must be a struct point or an interface",
+			expectedPanic: errors.New("Create testStruct error: Method MyErrorInit's 1 argument must be a struct point or an interface"),
 			expectError:   true,
 		},
 	}
@@ -89,7 +92,7 @@ func TestNewWithOption(t *testing.T) {
 					return
 				}
 				if tt.expectError && r != nil {
-					if r != tt.expectedPanic {
+					if r.(error).Error() != tt.expectedPanic.Error() {
 						t.Errorf("Got panic = %v, want %v", r, tt.expectedPanic)
 					}
 				}

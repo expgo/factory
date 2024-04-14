@@ -41,7 +41,7 @@ func (c *exprEnv) Visit(node *ast.Node) {
 	if s, ok := (*node).(*ast.IdentifierNode); ok {
 		_, ok = c.getValue(s.String())
 		if !ok {
-			value := _context.getByName(c.ctx, s.String())
+			value := _context.getByNamePanic(c.ctx, s.String(), nil)
 			c.setValue(s.String(), value)
 		}
 	}
@@ -82,7 +82,7 @@ func FindByName[T any](name string) *T {
 func FindByNameTimeout[T any](name string, timeout time.Duration) *T {
 	vt := reflect.TypeOf((*T)(nil))
 
-	result := _context.getByName(getTimeoutContext(timeout), name)
+	result := _context.getByNamePanic(getTimeoutContext(timeout), name, vt)
 
 	resultType := reflect.TypeOf(result)
 	if resultType.Kind() == reflect.Ptr && resultType.ConvertibleTo(vt) {
@@ -173,14 +173,8 @@ func FindInterfaces[T any]() (result []T) {
 }
 
 func (c *factoryContext) getByNameOrType(ctx context.Context, name string, vt reflect.Type) any {
-	mb, ok := c.namedMustBuilderCache.Load(name)
-
-	if ok {
-		result := mb.getter(ctx)
-		rt := reflect.TypeOf(result)
-		if vt.ConvertibleTo(rt) {
-			return result
-		}
+	if ret, err := c.getByName(ctx, name, vt); err == nil {
+		return ret
 	}
 
 	return c.getByType(ctx, vt)
@@ -234,14 +228,30 @@ func (c *factoryContext) setByType(vt reflect.Type, builder Getter) {
 	}
 }
 
-func (c *factoryContext) getByName(ctx context.Context, name string) any {
+func (c *factoryContext) getByNamePanic(ctx context.Context, name string, vt reflect.Type) any {
+	if ret, err := c.getByName(ctx, name, vt); err != nil {
+		panic(err)
+	} else {
+		return ret
+	}
+}
+
+func (c *factoryContext) getByName(ctx context.Context, name string, vt reflect.Type) (any, error) {
 	mb, ok := c.namedMustBuilderCache.Load(name)
 
 	if ok {
-		return mb.getter(ctx)
+		result := mb.getter(ctx)
+		if vt != nil {
+			rt := reflect.TypeOf(result)
+			if vt.ConvertibleTo(rt) {
+				return result, nil
+			}
+		} else {
+			return result, nil
+		}
 	}
 
-	panic(fmt.Errorf("Named builder %s not found.", name))
+	return nil, fmt.Errorf("Named builder %s not found.", name)
 }
 
 func (c *factoryContext) setByName(name string, vt reflect.Type, builder Getter) {
