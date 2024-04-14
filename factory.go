@@ -1,6 +1,7 @@
 package factory
 
 import (
+	"context"
 	"fmt"
 	"github.com/expgo/generic"
 	"github.com/expgo/structure"
@@ -94,7 +95,7 @@ func Factory[T any](f any) *_factory {
 	return fac
 }
 
-func callFactory(f *_factory, self any, fieldValue reflect.Value, structField reflect.StructField, newParams []string) error {
+func callFactory(ctx context.Context, f *_factory, self any, fieldValue reflect.Value, structField reflect.StructField, newParams []string) error {
 	vt := f.factoryType
 
 	if newParams == nil || len(newParams) != len(f.params) {
@@ -105,9 +106,9 @@ func callFactory(f *_factory, self any, fieldValue reflect.Value, structField re
 		funcValue := reflect.ValueOf(f.factory)
 		funcType := funcValue.Type()
 
-		params, err := _getMethodParams(self, funcType, newParams, funcType.Name())
+		params, err := _getMethodParams(ctx, self, funcType, newParams, funcType.Name())
 		if err != nil {
-			panic(fmt.Sprintf("factory func %s error: %v", structField.Type.String(), err))
+			panic(fmt.Errorf("factory func %s error: %v", structField.Type.String(), err))
 		}
 
 		values := funcValue.Call(params)
@@ -120,9 +121,9 @@ func callFactory(f *_factory, self any, fieldValue reflect.Value, structField re
 				panic("new method must only return one value")
 			}
 
-			params, err := _getMethodParams(self, newMethod.Type, newParams, newMethod.Name)
+			params, err := _getMethodParams(ctx, self, newMethod.Type, newParams, newMethod.Name)
 			if err != nil {
-				panic(fmt.Sprintf("factory new %s error: %v", structField.Type.String(), err))
+				panic(fmt.Errorf("factory new %s error: %v", structField.Type.String(), err))
 			}
 
 			values := newMethod.Func.Call(append([]reflect.Value{reflect.ValueOf(f.factory)}, params...))

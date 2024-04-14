@@ -1,11 +1,13 @@
 package factory
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"github.com/expgo/sync"
 	"reflect"
 	"strings"
-	"sync"
+	"time"
 )
 
 // DefaultInitMethodName is a constant representing the default name of the initialization method.
@@ -23,7 +25,9 @@ type Option struct {
 }
 
 func NewOption() *Option {
-	return &Option{}
+	return &Option{
+		lock: sync.NewMutex(),
+	}
 }
 
 func (o *Option) UseConstructor(useConstructor bool) *Option {
@@ -69,7 +73,11 @@ func New[T any]() *T {
 	return NewWithOption[T](newDefaultOption)
 }
 
-func _getMethodParams(self any, methodType reflect.Type, methodParams []string, methodName string) ([]reflect.Value, error) {
+func NewTimeout[T any](timeout time.Duration) *T {
+	return NewWithOptionTimeout[T](newDefaultOption, timeout)
+}
+
+func _getMethodParams(ctx context.Context, self any, methodType reflect.Type, methodParams []string, methodName string) ([]reflect.Value, error) {
 	var params []reflect.Value
 
 	baseIndex := methodType.NumIn() - len(methodParams)
@@ -78,9 +86,9 @@ func _getMethodParams(self any, methodType reflect.Type, methodParams []string, 
 		for i := 1; i < methodType.NumIn(); i++ {
 			paramType := methodType.In(i)
 			if (paramType.Kind() == reflect.Ptr && paramType.Elem().Kind() == reflect.Struct) || paramType.Kind() == reflect.Interface {
-				params = append(params, reflect.ValueOf(_context.getByType(paramType)))
+				params = append(params, reflect.ValueOf(_context.getByType(ctx, paramType)))
 			} else {
-				return nil, errors.New(fmt.Sprintf("Method %s's %d argument must be a struct point or an interface", methodName, i))
+				return nil, fmt.Errorf("Method %s's %d argument must be a struct point or an interface", methodName, i)
 			}
 		}
 	} else if baseIndex == 0 || baseIndex == 1 {
@@ -89,12 +97,12 @@ func _getMethodParams(self any, methodType reflect.Type, methodParams []string, 
 
 			tagValue, err := ParseTagValue(methodParams[i], nil)
 			if err != nil {
-				return nil, errors.New(fmt.Sprintf("Method %s's %d argument tag is err: %v", methodName, i+baseIndex, err))
+				return nil, fmt.Errorf("Method %s's %d argument tag is err: %v", methodName, i+baseIndex, err)
 			}
 
-			v, err := getValueByWireTag(self, tagValue, paramType)
+			v, err := getValueByWireTag(ctx, self, tagValue, paramType)
 			if err != nil {
-				return nil, errors.New(fmt.Sprintf("Method %s's %d argument get value from tag err: %v", methodName, i+baseIndex, err))
+				return nil, fmt.Errorf("Method %s's %d argument get value from tag err: %v", methodName, i+baseIndex, err)
 			}
 
 			params = append(params, reflect.ValueOf(v))
@@ -107,6 +115,14 @@ func _getMethodParams(self any, methodType reflect.Type, methodParams []string, 
 }
 
 func NewWithOption[T any](option *Option) *T {
+	return NewWithOptionTimeout[T](option, Opts.DefaultTimeout)
+}
+
+func NewWithOptionTimeout[T any](option *Option, timeout time.Duration) *T {
+	return newWithOptionContext[T](getTimeoutContext(timeout), option)
+}
+
+func newWithOptionContext[T any](ctx context.Context, option *Option) *T {
 	if option == nil {
 		option = newDefaultOption
 	}
@@ -134,14 +150,14 @@ func NewWithOption[T any](option *Option) *T {
 		initMethod, ok := vt.MethodByName(initMethodName)
 		if ok {
 			if initMethod.Type.NumOut() > 0 {
-				panic(fmt.Sprintf("Init method '%s' must not have return values", initMethodName))
+				panic(fmt.Errorf("Init method '%s' must not have return values", initMethodName))
 			}
 
-			params, err := _getMethodParams(t, initMethod.Type, option.initParams, initMethod.Name)
+			params, err := _getMethodParams(ctx, t, initMethod.Type, option.initParams, initMethod.Name)
 			if err == nil {
 				defer initMethod.Func.Call(append([]reflect.Value{reflect.ValueOf(t)}, params...))
 			} else {
-				panic(fmt.Sprintf("Create %s error: %v", vte.Name(), err))
+				panic(fmt.Errorf("Create %s error: %v", vte.Name(), err))
 			}
 		}
 	} else {
@@ -149,8 +165,8 @@ func NewWithOption[T any](option *Option) *T {
 	}
 
 	// do auto wire
-	if err := AutoWire(t); err != nil {
-		panic(fmt.Sprintf("Create %s error: %v", vt.Elem().Name(), err))
+	if err := autoWireContext(ctx, t); err != nil {
+		panic(fmt.Errorf("Create %s error: %v", vt.Elem().Name(), err))
 	}
 
 	return t

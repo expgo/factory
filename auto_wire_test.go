@@ -78,7 +78,7 @@ func TestUpdateSelf(t *testing.T) {
 }
 
 func TestExpr(t *testing.T) {
-	env := _context.getByName("env")
+	env := _context.getByName(getTimeoutContext(Opts.DefaultTimeout), "env")
 
 	envMap := map[string]any{}
 	envMap["env"] = env

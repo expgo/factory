@@ -1,9 +1,11 @@
 package factory
 
 import (
+	"context"
+	"fmt"
+	"github.com/expgo/sync"
 	"reflect"
 	"strings"
-	"sync"
 )
 
 type iInterface[T any] struct {
@@ -18,12 +20,15 @@ type iInterface[T any] struct {
 }
 
 func _interface[T any]() *iInterface[T] {
-	result := &iInterface[T]{}
+	result := &iInterface[T]{
+		once: sync.NewOnce(),
+		lock: sync.NewMutex(),
+	}
 
 	result._type = reflect.TypeOf((*T)(nil)).Elem()
 
-	result._getter = func() any {
-		return result.Get()
+	result._getter = func(ctx context.Context) any {
+		return result.getWithContext(ctx)
 	}
 
 	return result
@@ -71,13 +76,23 @@ func (s *iInterface[T]) SetInitFunc(initFunc func() T) *iInterface[T] {
 }
 
 func (s *iInterface[T]) Get() T {
-	s.once.Do(func() {
+	return s.getWithContext(getTimeoutContext(Opts.DefaultTimeout))
+}
+
+func (s *iInterface[T]) getWithContext(ctx context.Context) T {
+	timeout := getContextTimeout(ctx)
+	err := s.once.DoTimeout(timeout, func() error {
 		if s.initFunc != nil {
 			s.obj = s.initFunc()
 		} else {
 			panic("initFunc must be set")
 		}
+		return nil
 	})
+
+	if err != nil {
+		panic(fmt.Errorf("init interface %s, timeout: %s err: %+v", s._type.String(), timeout, err))
+	}
 
 	return s.obj
 }

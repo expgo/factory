@@ -1,6 +1,7 @@
 package factory
 
 import (
+	"context"
 	"encoding"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"github.com/expgo/structure"
 	"reflect"
 	"strings"
+	"time"
 )
 
 //go:generate ag
@@ -67,7 +69,7 @@ func ParseTagValue(tagValue string, checkAndSet func(tv *TagWithValue[WireValue]
 
 func wireError(structField reflect.StructField, rootValues []reflect.Value, wireRule string) error {
 	fieldPath := structure.GetFieldPath(structField, rootValues)
-	return errors.New(fmt.Sprintf("The field of 'wire' must be defined as a pointer to an object or an interface. %s, tag value: %s", fieldPath, wireRule))
+	return fmt.Errorf("The field of 'wire' must be defined as a pointer to an object or an interface. %s, tag value: %s", fieldPath, wireRule)
 }
 
 func getExpr(value string) (exprCode string, isExpr bool) {
@@ -78,7 +80,7 @@ func getExpr(value string) (exprCode string, isExpr bool) {
 	return value, false
 }
 
-func getValueByWireTag(self any, tagValue *TagWithValue[WireValue], t reflect.Type) (any, error) {
+func getValueByWireTag(ctx context.Context, self any, tagValue *TagWithValue[WireValue], t reflect.Type) (any, error) {
 	switch tagValue.Tag {
 	case WireValueSelf, WireValueAuto, WireValueType, WireValueName:
 		if (t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Struct) || t.Kind() == reflect.Interface {
@@ -87,15 +89,15 @@ func getValueByWireTag(self any, tagValue *TagWithValue[WireValue], t reflect.Ty
 				return self, nil
 			case WireValueAuto:
 				if len(tagValue.Value) > 0 {
-					return _context.getByNameOrType(tagValue.Value, t), nil
+					return _context.getByNameOrType(ctx, tagValue.Value, t), nil
 				} else {
-					return _context.getByType(t), nil
+					return _context.getByType(ctx, t), nil
 				}
 			case WireValueType:
-				return _context.getByType(t), nil
+				return _context.getByType(ctx, t), nil
 			case WireValueName:
 				if len(tagValue.Value) > 0 {
-					return _context.getByName(tagValue.Value), nil
+					return _context.getByName(ctx, tagValue.Value), nil
 				}
 			}
 		} else {
@@ -110,9 +112,9 @@ func getValueByWireTag(self any, tagValue *TagWithValue[WireValue], t reflect.Ty
 
 			exprCode, isExpr := getExpr(tagValue.Value)
 			if isExpr {
-				value, err := _context.evalExpr(exprCode)
+				value, err := _context.evalExpr(ctx, exprCode)
 				if err != nil {
-					return nil, errors.New(fmt.Sprintf("Tag value %s expr eval err: %v", tagValue, err))
+					return nil, fmt.Errorf("Tag value %s expr eval err: %v", tagValue, err)
 				}
 
 				return structure.ConvertToType(value, t)
@@ -122,10 +124,18 @@ func getValueByWireTag(self any, tagValue *TagWithValue[WireValue], t reflect.Ty
 		}
 	}
 
-	return nil, errors.New(fmt.Sprintf("Tag value not supported: %+v", tagValue))
+	return nil, fmt.Errorf("Tag value not supported: %+v", tagValue)
 }
 
 func AutoWire(self any) error {
+	return AutoWireTimeout(self, Opts.DefaultTimeout)
+}
+
+func AutoWireTimeout(self any, timeout time.Duration) error {
+	return autoWireContext(getTimeoutContext(timeout), self)
+}
+
+func autoWireContext(ctx context.Context, self any) error {
 	if self == nil {
 		return nil
 	}
@@ -147,9 +157,9 @@ func AutoWire(self any) error {
 			}
 			newValue = strings.TrimSpace(newValue)
 			if len(newValue) > 0 {
-				return callFactory(f, self, fieldValue, structField, strings.Split(newValue, ","))
+				return callFactory(ctx, f, self, fieldValue, structField, strings.Split(newValue, ","))
 			} else {
-				return callFactory(f, self, fieldValue, structField, nil)
+				return callFactory(ctx, f, self, fieldValue, structField, nil)
 			}
 		}
 
@@ -179,14 +189,14 @@ func AutoWire(self any) error {
 		default:
 		}
 
-		if wiredValue, err1 := getValueByWireTag(self, tv, structField.Type); err1 == nil {
+		if wiredValue, err1 := getValueByWireTag(ctx, self, tv, structField.Type); err1 == nil {
 			// Prefer using the set method
 			if structure.SetFieldBySetMethod(fieldValue, wiredValue, structField, rootValues[len(rootValues)-1]) {
 				return nil
 			}
 			return structure.SetField(fieldValue, wiredValue)
 		} else {
-			return errors.New(fmt.Sprintf("%v on %s", err1, structure.GetFieldPath(structField, rootValues)))
+			return fmt.Errorf("%v on %s", err1, structure.GetFieldPath(structField, rootValues))
 		}
 	})
 }

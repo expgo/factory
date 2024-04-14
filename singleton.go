@@ -1,9 +1,12 @@
 package factory
 
 import (
+	"context"
+	"fmt"
+	"github.com/expgo/sync"
 	"reflect"
 	"strings"
-	"sync"
+	"time"
 )
 
 type singleton[T any] struct {
@@ -20,13 +23,17 @@ type singleton[T any] struct {
 
 func _singleton[T any]() *singleton[T] {
 	result := &singleton[T]{
-		option: Option{},
+		once: sync.NewOnce(),
+		lock: sync.NewMutex(),
+		option: Option{
+			lock: sync.NewMutex(),
+		},
 	}
 
 	result._type = reflect.TypeOf((*T)(nil))
 
-	result._getter = func() any {
-		return result.Get()
+	result._getter = func(ctx context.Context) any {
+		return result.getWithContext(ctx)
 	}
 
 	return result
@@ -105,13 +112,24 @@ func (s *singleton[T]) InitParams(initParams ...string) *singleton[T] {
 }
 
 func (s *singleton[T]) Get() *T {
-	s.once.Do(func() {
+	return s.getWithContext(getTimeoutContext(Opts.DefaultTimeout))
+}
+
+func (s *singleton[T]) getWithContext(ctx context.Context) *T {
+	timeout := getContextTimeout(ctx)
+	err := s.once.DoTimeout(timeout, func() error {
 		if s.initFunc != nil {
 			s.obj = s.initFunc()
 		} else {
-			s.obj = NewWithOption[T](&s.option)
+			s.obj = newWithOptionContext[T](getNextTimeoutContext(ctx), &s.option)
 		}
+
+		return nil
 	})
+
+	if err != nil {
+		panic(fmt.Errorf("[%s]init singleton %s, timeout: %s err: %+v", time.Now(), s._type.String(), timeout, err))
+	}
 
 	return s.obj
 }

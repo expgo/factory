@@ -1,20 +1,24 @@
 package factory
 
 import (
+	"context"
 	"fmt"
 	"github.com/expgo/generic"
+	"github.com/expgo/sync"
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/ast"
 	"github.com/expr-lang/expr/parser"
 	"reflect"
-	"sync"
+	"time"
 )
 
-var _context = &context{}
+var _context = &factoryContext{
+	exprEnvInitOnce: sync.NewOnce(),
+}
 
-type Getter func() any
+type Getter func(ctx context.Context) any
 
-type context struct {
+type factoryContext struct {
 	defaultMustBuilderCache generic.Map[reflect.Type, *contextCachedItem] // package:name -> must builder
 	namedMustBuilderCache   generic.Map[string, *contextCachedItem]       // name -> must builder
 	wiringCache             generic.Map[reflect.Type, bool]
@@ -29,38 +33,38 @@ type contextCachedItem struct {
 
 type exprEnv struct {
 	env  map[string]any
-	lock sync.RWMutex
+	lock sync.Mutex
+	ctx  context.Context
 }
 
 func (c *exprEnv) Visit(node *ast.Node) {
 	if s, ok := (*node).(*ast.IdentifierNode); ok {
 		_, ok = c.getValue(s.String())
 		if !ok {
-			value := _context.getByName(s.String())
+			value := _context.getByName(c.ctx, s.String())
 			c.setValue(s.String(), value)
 		}
 	}
 }
 
 func (c *exprEnv) getValue(name string) (any, bool) {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
-
 	value, ok := c.env[name]
 	return value, ok
 }
 
 func (c *exprEnv) setValue(name string, value any) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
 	c.env[name] = value
 }
 
 func Find[T any]() *T {
+	return FindTimeout[T](Opts.DefaultTimeout)
+}
+
+func FindTimeout[T any](timeout time.Duration) *T {
+
 	vt := reflect.TypeOf((*T)(nil))
 
-	result := _context.getByType(vt)
+	result := _context.getByType(getTimeoutContext(timeout), vt)
 
 	resultType := reflect.TypeOf(result)
 	if resultType.Kind() == reflect.Ptr && resultType.ConvertibleTo(vt) {
@@ -68,13 +72,17 @@ func Find[T any]() *T {
 	}
 
 	// panic
-	panic(fmt.Sprintf("Invalid type: need %v, get %v", vt, resultType))
+	panic(fmt.Errorf("Invalid type: need %v, get %v", vt, resultType))
 }
 
 func FindByName[T any](name string) *T {
+	return FindByNameTimeout[T](name, Opts.DefaultTimeout)
+}
+
+func FindByNameTimeout[T any](name string, timeout time.Duration) *T {
 	vt := reflect.TypeOf((*T)(nil))
 
-	result := _context.getByName(name)
+	result := _context.getByName(getTimeoutContext(timeout), name)
 
 	resultType := reflect.TypeOf(result)
 	if resultType.Kind() == reflect.Ptr && resultType.ConvertibleTo(vt) {
@@ -82,10 +90,18 @@ func FindByName[T any](name string) *T {
 	}
 
 	// panic
-	panic(fmt.Sprintf("Invalid type: need %v, get %v", vt, resultType))
+	panic(fmt.Errorf("Invalid type: need %v, get %v", vt, resultType))
 }
 
 func Range[T any](rangeFunc func(any) bool) {
+	RangeTimeout[T](rangeFunc, Opts.DefaultTimeout)
+}
+
+func RangeTimeout[T any](rangeFunc func(any) bool, timeout time.Duration) {
+	rangeContext[T](rangeFunc, getTimeoutContext(timeout))
+}
+
+func rangeContext[T any](rangeFunc func(any) bool, ctx context.Context) {
 	vt := reflect.TypeOf((*T)(nil))
 
 	if vt.Elem().Kind() == reflect.Interface {
@@ -96,7 +112,7 @@ func Range[T any](rangeFunc func(any) bool) {
 
 	_context.defaultMustBuilderCache.Range(func(k reflect.Type, v *contextCachedItem) bool {
 		if k.ConvertibleTo(vt) {
-			return rangeFunc(v.getter())
+			return rangeFunc(v.getter(ctx))
 		}
 		return true
 	})
@@ -156,25 +172,25 @@ func FindInterfaces[T any]() (result []T) {
 	return
 }
 
-func (c *context) getByNameOrType(name string, vt reflect.Type) any {
+func (c *factoryContext) getByNameOrType(ctx context.Context, name string, vt reflect.Type) any {
 	mb, ok := c.namedMustBuilderCache.Load(name)
 
 	if ok {
-		result := mb.getter()
+		result := mb.getter(ctx)
 		rt := reflect.TypeOf(result)
 		if vt.ConvertibleTo(rt) {
 			return result
 		}
 	}
 
-	return c.getByType(vt)
+	return c.getByType(ctx, vt)
 }
 
-func (c *context) getByType(vt reflect.Type) any {
+func (c *factoryContext) getByType(ctx context.Context, vt reflect.Type) any {
 	mb, ok := c.defaultMustBuilderCache.Load(vt)
 
 	if ok {
-		return mb.getter()
+		return mb.getter(ctx)
 	}
 
 	if vt.Kind() == reflect.Interface {
@@ -186,7 +202,7 @@ func (c *context) getByType(vt reflect.Type) any {
 		convertibleListSize := convertibleList.Size()
 
 		if convertibleListSize > 1 {
-			panic(fmt.Sprintf("Multiple default builders found for type: %v, please use named singleton", vt))
+			panic(fmt.Errorf("Multiple default builders found for type: %v, please use named singleton", vt))
 		}
 
 		if convertibleListSize == 1 {
@@ -197,7 +213,7 @@ func (c *context) getByType(vt reflect.Type) any {
 			})
 
 			if ok {
-				return mb.getter()
+				return mb.getter(ctx)
 			}
 		}
 	}
@@ -207,46 +223,46 @@ func (c *context) getByType(vt reflect.Type) any {
 		svt = svt.Elem()
 	}
 
-	panic(fmt.Sprintf("use type to get Getter, %s:%s not found.", svt.PkgPath(), svt.Name()))
+	panic(fmt.Errorf("use type to get Getter, %s:%s not found.", svt.PkgPath(), svt.Name()))
 
 }
 
-func (c *context) setByType(vt reflect.Type, builder Getter) {
+func (c *factoryContext) setByType(vt reflect.Type, builder Getter) {
 	_, getOk := c.defaultMustBuilderCache.LoadOrStore(vt, &contextCachedItem{_type: vt, getter: builder})
 	if getOk {
-		panic(fmt.Sprintf("Default builder allready exist: %s", vt.String()))
+		panic(fmt.Errorf("Default builder allready exist: %s", vt.String()))
 	}
 }
 
-func (c *context) getByName(name string) any {
+func (c *factoryContext) getByName(ctx context.Context, name string) any {
 	mb, ok := c.namedMustBuilderCache.Load(name)
 
 	if ok {
-		return mb.getter()
+		return mb.getter(ctx)
 	}
 
-	panic(fmt.Sprintf("Named builder %s not found.", name))
+	panic(fmt.Errorf("Named builder %s not found.", name))
 }
 
-func (c *context) setByName(name string, vt reflect.Type, builder Getter) {
+func (c *factoryContext) setByName(name string, vt reflect.Type, builder Getter) {
 	_, getOk := c.namedMustBuilderCache.LoadOrStore(name, &contextCachedItem{_type: vt, getter: builder})
 	if getOk {
-		panic(fmt.Sprintf("Named builder allready exist: %s", name))
+		panic(fmt.Errorf("Named builder allready exist: %s", name))
 	}
 }
 
-func (c *context) wiring(vt reflect.Type) {
+func (c *factoryContext) wiring(vt reflect.Type) {
 	if vt.Kind() == reflect.Ptr {
 		vt = vt.Elem()
 	}
 
 	_, ok := c.wiringCache.LoadOrStore(vt, true)
 	if ok {
-		panic(fmt.Sprintf("%s:%s is wiring, possible circular reference exists.", vt.PkgPath(), vt.Name()))
+		panic(fmt.Errorf("%s:%s is wiring, possible circular reference exists.", vt.PkgPath(), vt.Name()))
 	}
 }
 
-func (c *context) wired(vt reflect.Type) {
+func (c *factoryContext) wired(vt reflect.Type) {
 	if vt.Kind() == reflect.Ptr {
 		vt = vt.Elem()
 	}
@@ -254,18 +270,25 @@ func (c *context) wired(vt reflect.Type) {
 	c.wiringCache.Delete(vt)
 }
 
-func (c *context) evalExpr(code string) (any, error) {
-	c.exprEnvInitOnce.Do(func() {
+func (c *factoryContext) evalExpr(ctx context.Context, code string) (any, error) {
+	err := c.exprEnvInitOnce.Do(func() error {
 		c.exprEnv = &exprEnv{
-			env: make(map[string]any),
+			env:  make(map[string]any),
+			lock: sync.NewMutex(),
 		}
+		return nil
 	})
 
-	tree, _ := parser.Parse(code)
-	ast.Walk(&tree.Node, c.exprEnv)
+	if err != nil {
+		return nil, err
+	}
 
-	c.exprEnv.lock.RLock()
-	defer c.exprEnv.lock.RUnlock()
+	tree, _ := parser.Parse(code)
+
+	c.exprEnv.lock.Lock()
+	defer c.exprEnv.lock.Unlock()
+	c.exprEnv.ctx = ctx
+	ast.Walk(&tree.Node, c.exprEnv)
 
 	return expr.Eval(code, c.exprEnv.env)
 }
