@@ -6,6 +6,8 @@ github.com/expgo/generic v0.0.0-20240410123247-e162144797ca h1:/+jU23qxfKaI7NLQ+
 github.com/expgo/generic v0.0.0-20240410123247-e162144797ca/go.mod h1:Q3Y49UmlJcsKsmbWI6VA4+Z+N66PfJcSOPM+XC/N1y8=
 github.com/expgo/structure v0.0.0-20240409145933-0849cfa62db1 h1:2fcKSKZlBBibWukb7aXbGk7SGVxZSPM1JbwVKtZjp7M=
 github.com/expgo/structure v0.0.0-20240409145933-0849cfa62db1/go.mod h1:5vmNK2QGUV0oovMingawA6CdIIZxKhLjxxq3GLxDNXI=
+github.com/expgo/sync v0.0.0-20240414145156-d9bdfe3aca0d h1:mEUX3d2EqdAtYysiqWKLbXfMk0mUidB+DoujPizIKwc=
+github.com/expgo/sync v0.0.0-20240414145156-d9bdfe3aca0d/go.mod h1:xsnlCFzkJVsSErRFz2usJhsbY6p6txA7L/rj2XgWyNI=
 github.com/expr-lang/expr v1.16.4 h1:1Mq5RHw5T5jxXMUvyb+eT546mJREm1yFyNHkybYQ81c=
 github.com/expr-lang/expr v1.16.4/go.mod h1:uCkhfG+x7fcZ5A5sXHKuQ07jGZRl6J0FCAaf2k4PtVQ=
 github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5/go.mod h1:jvVRKCrJTQWu0XVbaOlby/2lO20uSCHEMzzplHXte1o=

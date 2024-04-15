@@ -19,11 +19,11 @@ var _context = &factoryContext{
 type Getter func(ctx context.Context) any
 
 type factoryContext struct {
-	defaultMustBuilderCache generic.Map[reflect.Type, *contextCachedItem] // package:name -> must builder
-	namedMustBuilderCache   generic.Map[string, *contextCachedItem]       // name -> must builder
-	wiringCache             generic.Map[reflect.Type, bool]
-	exprEnv                 *exprEnv
-	exprEnvInitOnce         sync.Once
+	typedMap        generic.Map[reflect.Type, *contextCachedItem] // package:name -> must builder
+	namedMap        generic.Map[string, *contextCachedItem]       // name -> must builder
+	wiringCache     generic.Map[reflect.Type, bool]
+	exprEnv         *exprEnv
+	exprEnvInitOnce sync.Once
 }
 
 type contextCachedItem struct {
@@ -110,7 +110,7 @@ func rangeContext[T any](rangeFunc func(any) bool, ctx context.Context) {
 		panic("Range only range type and interface")
 	}
 
-	_context.defaultMustBuilderCache.Range(func(k reflect.Type, v *contextCachedItem) bool {
+	_context.typedMap.Range(func(k reflect.Type, v *contextCachedItem) bool {
 		if k.ConvertibleTo(vt) {
 			return rangeFunc(v.getter(ctx))
 		}
@@ -181,15 +181,18 @@ func (c *factoryContext) getByNameOrType(ctx context.Context, name string, vt re
 }
 
 func (c *factoryContext) getByType(ctx context.Context, vt reflect.Type) any {
-	mb, ok := c.defaultMustBuilderCache.Load(vt)
+	mb, ok := c.typedMap.Load(vt)
 
 	if ok {
+		ctx = pushTypeGetting(ctx, vt)
+		defer popTypeGetting(ctx, vt)
+
 		return mb.getter(ctx)
 	}
 
 	if vt.Kind() == reflect.Interface {
 		// 需求是接口才使用下面方法找寻
-		convertibleList := c.defaultMustBuilderCache.Filter(func(k reflect.Type, v *contextCachedItem) bool {
+		convertibleList := c.typedMap.Filter(func(k reflect.Type, v *contextCachedItem) bool {
 			return k.ConvertibleTo(vt)
 		})
 
@@ -207,6 +210,9 @@ func (c *factoryContext) getByType(ctx context.Context, vt reflect.Type) any {
 			})
 
 			if ok {
+				ctx = pushTypeGetting(ctx, vt)
+				defer popTypeGetting(ctx, vt)
+
 				return mb.getter(ctx)
 			}
 		}
@@ -217,12 +223,12 @@ func (c *factoryContext) getByType(ctx context.Context, vt reflect.Type) any {
 		svt = svt.Elem()
 	}
 
-	panic(fmt.Errorf("use type to get Getter, %s:%s not found.", svt.PkgPath(), svt.Name()))
+	panic(fmt.Errorf("use type to get Getter, %s:%s not found", svt.PkgPath(), svt.Name()))
 
 }
 
 func (c *factoryContext) setByType(vt reflect.Type, builder Getter) {
-	_, getOk := c.defaultMustBuilderCache.LoadOrStore(vt, &contextCachedItem{_type: vt, getter: builder})
+	_, getOk := c.typedMap.LoadOrStore(vt, &contextCachedItem{_type: vt, getter: builder})
 	if getOk {
 		panic(fmt.Errorf("Default builder allready exist: %s", vt.String()))
 	}
@@ -237,9 +243,12 @@ func (c *factoryContext) getByNamePanic(ctx context.Context, name string, vt ref
 }
 
 func (c *factoryContext) getByName(ctx context.Context, name string, vt reflect.Type) (any, error) {
-	mb, ok := c.namedMustBuilderCache.Load(name)
+	mb, ok := c.namedMap.Load(name)
 
 	if ok {
+		ctx = pushNameGetting(ctx, name)
+		defer popNameGetting(ctx, name)
+
 		result := mb.getter(ctx)
 		if vt != nil {
 			rt := reflect.TypeOf(result)
@@ -255,7 +264,7 @@ func (c *factoryContext) getByName(ctx context.Context, name string, vt reflect.
 }
 
 func (c *factoryContext) setByName(name string, vt reflect.Type, builder Getter) {
-	_, getOk := c.namedMustBuilderCache.LoadOrStore(name, &contextCachedItem{_type: vt, getter: builder})
+	_, getOk := c.namedMap.LoadOrStore(name, &contextCachedItem{_type: vt, getter: builder})
 	if getOk {
 		panic(fmt.Errorf("Named builder allready exist: %s", name))
 	}
@@ -268,7 +277,7 @@ func (c *factoryContext) wiring(vt reflect.Type) {
 
 	_, ok := c.wiringCache.LoadOrStore(vt, true)
 	if ok {
-		panic(fmt.Errorf("%s:%s is wiring, possible circular reference exists.", vt.PkgPath(), vt.Name()))
+		panic(fmt.Errorf("%s.%s is wiring, possible circular reference exists.", vt.PkgPath(), vt.Name()))
 	}
 }
 

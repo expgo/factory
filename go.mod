@@ -2,13 +2,11 @@ module github.com/expgo/factory
 
 go 1.20
 
-replace github.com/expgo/sync => /home/mind/peace/expgo/sync
-
 require (
 	github.com/expgo/ag v0.0.0-20240412034540-693d298d12d2
 	github.com/expgo/generic v0.0.0-20240410123247-e162144797ca
 	github.com/expgo/structure v0.0.0-20240409145933-0849cfa62db1
-	github.com/expgo/sync v0.0.0-20240413125922-4a5fd241eea4
+	github.com/expgo/sync v0.0.0-20240414145156-d9bdfe3aca0d
 	github.com/expr-lang/expr v1.16.4
 	github.com/stretchr/testify v1.9.0
 )
