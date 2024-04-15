@@ -20,7 +20,7 @@ func (g *PluginGenerator) GetImports() []string {
 }
 
 func (g *PluginGenerator) WriteConst(wr io.Writer) error {
-	if stream.Must(stream.Of(g.singletons).AnyMatch(func(s *Singleton) (bool, error) { return s.LocalVar, nil })) {
+	if stream.Must(stream.Of(g.singletons).AnyMatch(func(s *Singleton) (bool, error) { return s.LocalVar || s.LocalGetter, nil })) {
 
 		buf := bytes.NewBuffer([]byte{})
 
@@ -44,7 +44,7 @@ func (g *PluginGenerator) WriteConst(wr io.Writer) error {
 }
 
 func (g *PluginGenerator) WriteInitFunc(wr io.Writer) error {
-	if stream.Must(stream.Of(g.singletons).AnyMatch(func(s *Singleton) (bool, error) { return !s.LocalVar, nil })) ||
+	if stream.Must(stream.Of(g.singletons).AnyMatch(func(s *Singleton) (bool, error) { return !(s.LocalVar || s.LocalGetter), nil })) ||
 		len(g.factories) > 0 {
 		buf := bytes.NewBuffer([]byte{})
 

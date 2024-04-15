@@ -34,7 +34,7 @@ func (s *Singleton) SetLocalGetter(localGetter bool) {
 }
 
 func (s *Singleton) WriteString(buf io.StringWriter) error {
-	if s.LocalVar {
+	if s.LocalVar || s.LocalGetter {
 		buf.WriteString(fmt.Sprintf("%s%s = ", s.LocalPrefix, s.typeName))
 	}
 
