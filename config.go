@@ -27,12 +27,16 @@ func getTimeoutContext(timeout time.Duration) context.Context {
 }
 
 func getNextTimeoutContext(ctx context.Context) context.Context {
-	duration := getContextTimeout(ctx)
-	duration -= Opts.DefaultTimeoutInterval
-	if duration <= 0 {
-		panic("need larger DefaultFindTimeout")
+	if Opts.EnableTimeout {
+		duration := getContextTimeout(ctx)
+		duration -= Opts.DefaultTimeoutInterval
+		if duration <= 0 {
+			panic("need larger DefaultFindTimeout")
+		}
+		return context.WithValue(ctx, TimeoutKey, duration)
+	} else {
+		return context.WithValue(ctx, TimeoutKey, 0)
 	}
-	return context.WithValue(ctx, TimeoutKey, duration)
 }
 
 func getContextTimeout(ctx context.Context) time.Duration {
