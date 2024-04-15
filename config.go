@@ -17,7 +17,7 @@ var Opts = struct {
 	DefaultTimeout         time.Duration
 	DefaultTimeoutInterval time.Duration
 }{
-	EnableTimeout:          true,
+	EnableTimeout:          false,
 	DefaultTimeout:         3 * time.Second,
 	DefaultTimeoutInterval: 100 * time.Millisecond,
 }
