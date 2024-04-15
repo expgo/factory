@@ -69,7 +69,7 @@ func ParseTagValue(tagValue string, checkAndSet func(tv *TagWithValue[WireValue]
 
 func wireError(structField reflect.StructField, rootValues []reflect.Value, wireRule string) error {
 	fieldPath := structure.GetFieldPath(structField, rootValues)
-	return fmt.Errorf("The field of 'wire' must be defined as a pointer to an object or an interface. %s, tag value: %s", fieldPath, wireRule)
+	return fmt.Errorf("the field of 'wire' must be defined as a pointer to an object or an interface. %s, tag value: %s", fieldPath, wireRule)
 }
 
 func getExpr(value string) (exprCode string, isExpr bool) {
@@ -114,7 +114,7 @@ func getValueByWireTag(ctx context.Context, self any, tagValue *TagWithValue[Wir
 			if isExpr {
 				value, err := _context.evalExpr(ctx, exprCode)
 				if err != nil {
-					return nil, fmt.Errorf("Tag value %s expr eval err: %v", tagValue, err)
+					return nil, fmt.Errorf("tag value %s expr eval err: %v", tagValue, err)
 				}
 
 				return structure.ConvertToType(value, t)
@@ -124,7 +124,7 @@ func getValueByWireTag(ctx context.Context, self any, tagValue *TagWithValue[Wir
 		}
 	}
 
-	return nil, fmt.Errorf("Tag value not supported: %+v", tagValue)
+	return nil, fmt.Errorf("tag value not supported: %+v", tagValue)
 }
 
 func AutoWire(self any) error {

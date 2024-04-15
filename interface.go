@@ -13,10 +13,10 @@ type iInterface[T any] struct {
 	obj      T
 	initFunc func() T
 
-	_name   string
-	_type   reflect.Type
-	_getter Getter
-	lock    sync.Mutex
+	_name string
+	lock  sync.Mutex
+
+	cci *contextCachedItem
 }
 
 func _interface[T any]() *iInterface[T] {
@@ -25,9 +25,11 @@ func _interface[T any]() *iInterface[T] {
 		lock: sync.NewMutex(),
 	}
 
-	result._type = reflect.TypeOf((*T)(nil)).Elem()
+	result.cci = &contextCachedItem{}
 
-	result._getter = func(ctx context.Context) any {
+	result.cci._type = reflect.TypeOf((*T)(nil)).Elem()
+
+	result.cci.getter = func(ctx context.Context) any {
 		return result.getWithContext(ctx)
 	}
 
@@ -37,7 +39,7 @@ func _interface[T any]() *iInterface[T] {
 func Interface[T any]() *iInterface[T] {
 	result := _interface[T]()
 
-	_context.setByType(result._type, result._getter)
+	_context.setByType(result.cci._type, result.cci)
 
 	return result
 }
@@ -58,7 +60,7 @@ func (s *iInterface[T]) Name(name string) *iInterface[T] {
 	}
 
 	if len(s._name) == 0 {
-		_context.setByName(name, s._type, s._getter)
+		_context.setByName(name, s.cci)
 		s._name = name
 	} else {
 		panic("name already set")
@@ -91,7 +93,7 @@ func (s *iInterface[T]) getWithContext(ctx context.Context) T {
 	})
 
 	if err != nil {
-		panic(fmt.Errorf("init interface %s, timeout: %s err: %+v", s._type.String(), timeout, err))
+		panic(fmt.Errorf("init interface %s, timeout: %s err: %+v", s.cci._type.String(), timeout, err))
 	}
 
 	return s.obj

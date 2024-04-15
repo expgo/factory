@@ -184,8 +184,8 @@ func (c *factoryContext) getByType(ctx context.Context, vt reflect.Type) any {
 	mb, ok := c.typedMap.Load(vt)
 
 	if ok {
-		ctx = pushTypeGetting(ctx, vt)
-		defer popTypeGetting(ctx, vt)
+		ctx = pushGetter(ctx, mb)
+		defer popGetter(ctx)
 
 		return mb.getter(ctx)
 	}
@@ -210,8 +210,8 @@ func (c *factoryContext) getByType(ctx context.Context, vt reflect.Type) any {
 			})
 
 			if ok {
-				ctx = pushTypeGetting(ctx, vt)
-				defer popTypeGetting(ctx, vt)
+				ctx = pushGetter(ctx, mb)
+				defer popGetter(ctx)
 
 				return mb.getter(ctx)
 			}
@@ -227,8 +227,8 @@ func (c *factoryContext) getByType(ctx context.Context, vt reflect.Type) any {
 
 }
 
-func (c *factoryContext) setByType(vt reflect.Type, builder Getter) {
-	_, getOk := c.typedMap.LoadOrStore(vt, &contextCachedItem{_type: vt, getter: builder})
+func (c *factoryContext) setByType(vt reflect.Type, cci *contextCachedItem) {
+	_, getOk := c.typedMap.LoadOrStore(vt, cci)
 	if getOk {
 		panic(fmt.Errorf("Default builder allready exist: %s", vt.String()))
 	}
@@ -246,8 +246,8 @@ func (c *factoryContext) getByName(ctx context.Context, name string, vt reflect.
 	mb, ok := c.namedMap.Load(name)
 
 	if ok {
-		ctx = pushNameGetting(ctx, name)
-		defer popNameGetting(ctx, name)
+		ctx = pushGetter(ctx, mb)
+		defer popGetter(ctx)
 
 		result := mb.getter(ctx)
 		if vt != nil {
@@ -263,8 +263,8 @@ func (c *factoryContext) getByName(ctx context.Context, name string, vt reflect.
 	return nil, fmt.Errorf("Named builder %s not found.", name)
 }
 
-func (c *factoryContext) setByName(name string, vt reflect.Type, builder Getter) {
-	_, getOk := c.namedMap.LoadOrStore(name, &contextCachedItem{_type: vt, getter: builder})
+func (c *factoryContext) setByName(name string, cci *contextCachedItem) {
+	_, getOk := c.namedMap.LoadOrStore(name, cci)
 	if getOk {
 		panic(fmt.Errorf("Named builder allready exist: %s", name))
 	}

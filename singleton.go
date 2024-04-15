@@ -15,10 +15,10 @@ type singleton[T any] struct {
 	initFunc func() *T
 	option   Option
 
-	_name   string
-	_type   reflect.Type
-	_getter Getter
-	lock    sync.Mutex
+	_name string
+	lock  sync.Mutex
+
+	cci *contextCachedItem
 }
 
 func _singleton[T any]() *singleton[T] {
@@ -30,9 +30,11 @@ func _singleton[T any]() *singleton[T] {
 		},
 	}
 
-	result._type = reflect.TypeOf((*T)(nil))
+	result.cci = &contextCachedItem{}
 
-	result._getter = func(ctx context.Context) any {
+	result.cci._type = reflect.TypeOf((*T)(nil))
+
+	result.cci.getter = func(ctx context.Context) any {
 		return result.getWithContext(ctx)
 	}
 
@@ -42,7 +44,7 @@ func _singleton[T any]() *singleton[T] {
 func Singleton[T any]() *singleton[T] {
 	result := _singleton[T]()
 
-	_context.setByType(result._type, result._getter)
+	_context.setByType(result.cci._type, result.cci)
 
 	return result
 }
@@ -63,7 +65,7 @@ func (s *singleton[T]) Name(name string) *singleton[T] {
 	}
 
 	if len(s._name) == 0 {
-		_context.setByName(name, s._type, s._getter)
+		_context.setByName(name, s.cci)
 		s._name = name
 	} else {
 		panic("name already set")
@@ -128,7 +130,7 @@ func (s *singleton[T]) getWithContext(ctx context.Context) *T {
 	})
 
 	if err != nil {
-		panic(fmt.Errorf("[%s]init singleton %s, timeout: %s err: %+v", time.Now(), s._type.String(), timeout, err))
+		panic(fmt.Errorf("[%s]init singleton %s, timeout: %s err: %+v", time.Now(), s.cci._type.String(), timeout, err))
 	}
 
 	return s.obj

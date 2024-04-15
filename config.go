@@ -4,14 +4,11 @@ import (
 	"context"
 	"fmt"
 	"github.com/expgo/generic"
-	"reflect"
 	"time"
 )
 
 const TimeoutKey = "Timeout"
-const NameGettingKey = "NameGetting"
-const TypeGettingKey = "TypeGetting"
-const LastGettingKey = "LastGetting"
+const GetterKey = "Getter"
 
 var Opts = struct {
 	EnableTimeout          bool
@@ -49,64 +46,43 @@ func getContextTimeout(ctx context.Context) time.Duration {
 	}
 }
 
-func pushNameGetting(ctx context.Context, name string) context.Context {
-	nameSetValue := ctx.Value(NameGettingKey)
-	if nameSetValue == nil {
-		nameSetValue = &generic.Set[string]{}
-		ctx = context.WithValue(ctx, NameGettingKey, nameSetValue)
+func pushGetter(ctx context.Context, ci *contextCachedItem) context.Context {
+	ciSetValue := ctx.Value(GetterKey)
+	if ciSetValue == nil {
+		ciSetValue = &generic.Set[*contextCachedItem]{}
+		ctx = context.WithValue(ctx, GetterKey, ciSetValue)
 	}
 
-	nameSet := nameSetValue.(*generic.Set[string])
-	if !nameSet.Add(name) {
-
-		panic(fmt.Errorf("name %s is getting, possible circular reference with %s ", name, getLastGetting(ctx)))
+	ciSet := ciSetValue.(*generic.Set[*contextCachedItem])
+	if !ciSet.Add(ci) {
+		panic(fmt.Errorf("getting %s, possible circular reference with %s", ci._type.String(), lastGetter(ctx)))
 	}
-
-	return setLastGetting(ctx, fmt.Sprintf("Named: %s", name))
+	return ctx
 }
 
-func popNameGetting(ctx context.Context, name string) {
-	nameSetValue := ctx.Value(NameGettingKey)
-	if nameSetValue != nil {
-		nameSet := nameSetValue.(*generic.Set[string])
-		nameSet.Remove(name)
-	}
-}
-
-func pushTypeGetting(ctx context.Context, vt reflect.Type) context.Context {
-	typeSetValue := ctx.Value(TypeGettingKey)
-	if typeSetValue == nil {
-		typeSetValue = &generic.Set[reflect.Type]{}
-		ctx = context.WithValue(ctx, TypeGettingKey, typeSetValue)
-	}
-
-	typeSet := typeSetValue.(*generic.Set[reflect.Type])
-	if !typeSet.Add(vt) {
-		panic(fmt.Errorf("type %s is getting, possible circular reference with %s", vt, getLastGetting(ctx)))
-	}
-
-	return setLastGetting(ctx, fmt.Sprintf("Typed: %s", vt.String()))
-}
-
-func popTypeGetting(ctx context.Context, vt reflect.Type) {
-	typeSetValue := ctx.Value(TypeGettingKey)
-	if typeSetValue != nil {
-		typeSet := typeSetValue.(*generic.Set[reflect.Type])
-		typeSet.Remove(vt)
-	}
-}
-
-func getLastGetting(ctx context.Context) string {
-	lastGettingValue := ctx.Value(LastGettingKey)
-	if lastGettingValue != nil {
-		if lastGetting, ok := lastGettingValue.(string); ok {
-			return lastGetting
+func popGetter(ctx context.Context) {
+	ciSetValue := ctx.Value(GetterKey)
+	if ciSetValue != nil {
+		ciSet := ciSetValue.(*generic.Set[*contextCachedItem])
+		idx := ciSet.Size() - 1
+		if idx >= 0 {
+			ciSet.RemoveAt(idx)
 		}
 	}
-
-	return ""
 }
 
-func setLastGetting(ctx context.Context, lastGetting string) context.Context {
-	return context.WithValue(ctx, LastGettingKey, lastGetting)
+func lastGetter(ctx context.Context) string {
+	ciSetValue := ctx.Value(GetterKey)
+	if ciSetValue != nil {
+		ciSet := ciSetValue.(*generic.Set[*contextCachedItem])
+		lastIdx := ciSet.Size() - 1
+		if lastIdx >= 0 {
+			ci, err := ciSet.At(lastIdx)
+			if err != nil {
+				return ""
+			}
+			return ci._type.String()
+		}
+	}
+	return ""
 }
