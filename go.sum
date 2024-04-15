@@ -14,6 +14,8 @@ github.com/expgo/sync v0.0.0-20240414145156-d9bdfe3aca0d h1:mEUX3d2EqdAtYysiqWKL
 github.com/expgo/sync v0.0.0-20240414145156-d9bdfe3aca0d/go.mod h1:xsnlCFzkJVsSErRFz2usJhsbY6p6txA7L/rj2XgWyNI=
 github.com/expgo/sync v0.0.0-20240415025832-cd66dc513f1c h1:qj7EOBsbmFuNZkw7i9SEfpy/3fa0Azq1YXMy8s+Ux0s=
 github.com/expgo/sync v0.0.0-20240415025832-cd66dc513f1c/go.mod h1:xsnlCFzkJVsSErRFz2usJhsbY6p6txA7L/rj2XgWyNI=
+github.com/expgo/sync v0.0.0-20240415082356-7ff1f8607b7c h1:mVzlNfq0PLqXzA26OBAe9nfIQCca69GF28p+6hGSk+U=
+github.com/expgo/sync v0.0.0-20240415082356-7ff1f8607b7c/go.mod h1:xsnlCFzkJVsSErRFz2usJhsbY6p6txA7L/rj2XgWyNI=
 github.com/expr-lang/expr v1.16.4 h1:1Mq5RHw5T5jxXMUvyb+eT546mJREm1yFyNHkybYQ81c=
 github.com/expr-lang/expr v1.16.4/go.mod h1:uCkhfG+x7fcZ5A5sXHKuQ07jGZRl6J0FCAaf2k4PtVQ=
 github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5/go.mod h1:jvVRKCrJTQWu0XVbaOlby/2lO20uSCHEMzzplHXte1o=

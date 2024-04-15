@@ -84,3 +84,36 @@ func TestAutoWireValueCircular(t *testing.T) {
 		_ = Find[expr1]()
 	}()
 }
+
+type wire1 struct {
+	wire2 *wire2
+}
+
+func (w *wire1) Init() {
+	w.wire2 = New[wire2]()
+}
+
+type wire2 struct {
+	wire1 *wire1
+}
+
+func (w *wire2) Init() {
+	w.wire1 = New[wire1]()
+}
+
+// TODO fix it
+func TestAutoWireInitFuncCircular(t *testing.T) {
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				if r.(error).Error() != "getting *factory.wire1, possible circular reference with *factory.wire2" {
+					t.Errorf("%s", r)
+				}
+			} else {
+				t.Errorf("Expected panic, but no panic occurred")
+			}
+		}()
+
+		_ = New[wire1]()
+	}()
+}
