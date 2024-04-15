@@ -70,7 +70,7 @@ func TestAutoWireValueCircular(t *testing.T) {
 	func() {
 		defer func() {
 			if r := recover(); r != nil {
-				if r.(error).Error() != "getting *factory.name1, possible circular reference with *factory.name2" {
+				if r.(error).Error() != "getting *factory.expr1, possible circular reference with *factory.expr2" {
 					t.Errorf("%s", r)
 				}
 			} else {

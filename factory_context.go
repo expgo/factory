@@ -13,17 +13,18 @@ import (
 )
 
 var _context = &factoryContext{
-	exprEnvInitOnce: sync.NewOnce(),
+	exprEnvMap:  make(map[string]any),
+	exprEnvLock: sync.NewRWMutex(),
 }
 
 type Getter func(ctx context.Context) any
 
 type factoryContext struct {
-	typedMap        generic.Map[reflect.Type, *contextCachedItem] // package:name -> must builder
-	namedMap        generic.Map[string, *contextCachedItem]       // name -> must builder
-	wiringCache     generic.Map[reflect.Type, bool]
-	exprEnv         *exprEnv
-	exprEnvInitOnce sync.Once
+	typedMap    generic.Map[reflect.Type, *contextCachedItem] // package:name -> must builder
+	namedMap    generic.Map[string, *contextCachedItem]       // name -> must builder
+	wiringCache generic.Map[reflect.Type, bool]
+	exprEnvMap  map[string]any
+	exprEnvLock sync.RWMutex
 }
 
 type contextCachedItem struct {
@@ -31,13 +32,11 @@ type contextCachedItem struct {
 	getter Getter
 }
 
-type exprEnv struct {
-	env  map[string]any
-	lock sync.Mutex
-	ctx  context.Context
+type exprContext struct {
+	ctx context.Context
 }
 
-func (c *exprEnv) Visit(node *ast.Node) {
+func (c *exprContext) Visit(node *ast.Node) {
 	if s, ok := (*node).(*ast.IdentifierNode); ok {
 		_, ok = c.getValue(s.String())
 		if !ok {
@@ -47,13 +46,19 @@ func (c *exprEnv) Visit(node *ast.Node) {
 	}
 }
 
-func (c *exprEnv) getValue(name string) (any, bool) {
-	value, ok := c.env[name]
+func (c *exprContext) getValue(name string) (any, bool) {
+	_context.exprEnvLock.RLock()
+	defer _context.exprEnvLock.RUnlock()
+
+	value, ok := _context.exprEnvMap[name]
 	return value, ok
 }
 
-func (c *exprEnv) setValue(name string, value any) {
-	c.env[name] = value
+func (c *exprContext) setValue(name string, value any) {
+	_context.exprEnvLock.Lock()
+	defer _context.exprEnvLock.Unlock()
+
+	_context.exprEnvMap[name] = value
 }
 
 func Find[T any]() *T {
@@ -290,24 +295,13 @@ func (c *factoryContext) wired(vt reflect.Type) {
 }
 
 func (c *factoryContext) evalExpr(ctx context.Context, code string) (any, error) {
-	err := c.exprEnvInitOnce.Do(func() error {
-		c.exprEnv = &exprEnv{
-			env:  make(map[string]any),
-			lock: sync.NewMutex(),
-		}
-		return nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
 	tree, _ := parser.Parse(code)
 
-	c.exprEnv.lock.Lock()
-	defer c.exprEnv.lock.Unlock()
-	c.exprEnv.ctx = ctx
-	ast.Walk(&tree.Node, c.exprEnv)
+	exprCtx := &exprContext{ctx: ctx}
+	ast.Walk(&tree.Node, exprCtx)
 
-	return expr.Eval(code, c.exprEnv.env)
+	c.exprEnvLock.RLock()
+	defer c.exprEnvLock.RUnlock()
+
+	return expr.Eval(code, c.exprEnvMap)
 }
