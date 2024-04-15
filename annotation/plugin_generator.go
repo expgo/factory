@@ -27,7 +27,7 @@ func (g *PluginGenerator) WriteConst(wr io.Writer) error {
 		buf.WriteString("var(\n")
 
 		for _, s := range g.singletons {
-			if s.LocalVar {
+			if s.LocalVar || s.LocalGetter {
 				if err := s.WriteString(buf); err != nil {
 					return err
 				}
@@ -74,7 +74,7 @@ func (g *PluginGenerator) WriteInitFunc(wr io.Writer) error {
 		}
 
 		for _, s := range g.singletons {
-			if !s.LocalVar {
+			if !(s.LocalVar || s.LocalGetter) {
 				if err := s.WriteString(buf); err != nil {
 					return err
 				}
