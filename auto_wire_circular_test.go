@@ -101,7 +101,6 @@ func (w *wire2) Init() {
 	w.wire1 = New[wire1]()
 }
 
-// TODO fix it
 func TestAutoWireInitFuncCircular(t *testing.T) {
 	func() {
 		defer func() {

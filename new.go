@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/expgo/generic"
 	"github.com/expgo/sync"
 	"reflect"
 	"strings"
@@ -16,6 +17,8 @@ import (
 // If the 'useConstructor' field in the Option struct is true, the DefaultInitMethodName is set to the name of the struct.
 // The DefaultInitMethodName is used in reflection to find and invoke the initialization method.
 const DefaultInitMethodName = "Init"
+
+var newCtxMap generic.Map[int, context.Context]
 
 type Option struct {
 	useConstructor bool
@@ -88,7 +91,7 @@ func _getMethodParams(ctx context.Context, self any, methodType reflect.Type, me
 			if (paramType.Kind() == reflect.Ptr && paramType.Elem().Kind() == reflect.Struct) || paramType.Kind() == reflect.Interface {
 				params = append(params, reflect.ValueOf(_context.getByType(ctx, paramType)))
 			} else {
-				return nil, fmt.Errorf("Method %s's %d argument must be a struct point or an interface", methodName, i)
+				return nil, fmt.Errorf("method %s's %d argument must be a struct point or an interface", methodName, i)
 			}
 		}
 	} else if baseIndex == 0 || baseIndex == 1 {
@@ -97,12 +100,12 @@ func _getMethodParams(ctx context.Context, self any, methodType reflect.Type, me
 
 			tagValue, err := ParseTagValue(methodParams[i], nil)
 			if err != nil {
-				return nil, fmt.Errorf("Method %s's %d argument tag is err: %v", methodName, i+baseIndex, err)
+				return nil, fmt.Errorf("method %s's %d argument tag is err: %v", methodName, i+baseIndex, err)
 			}
 
 			v, err := getValueByWireTag(ctx, self, tagValue, paramType)
 			if err != nil {
-				return nil, fmt.Errorf("Method %s's %d argument get value from tag err: %v", methodName, i+baseIndex, err)
+				return nil, fmt.Errorf("method %s's %d argument get value from tag err: %v", methodName, i+baseIndex, err)
 			}
 
 			params = append(params, reflect.ValueOf(v))
@@ -119,7 +122,15 @@ func NewWithOption[T any](option *Option) *T {
 }
 
 func NewWithOptionTimeout[T any](option *Option, timeout time.Duration) *T {
-	return newWithOptionContext[T](getTimeoutContext(timeout), option)
+	goId := sync.GoId()
+	ctx, loaded := newCtxMap.LoadOrStore(goId, initTypeCtx(getTimeoutContext(timeout)))
+	if !loaded {
+		defer func() {
+			newCtxMap.Delete(goId)
+		}()
+	}
+
+	return newWithOptionContext[T](ctx, option)
 }
 
 func newWithOptionContext[T any](ctx context.Context, option *Option) *T {
@@ -130,6 +141,8 @@ func newWithOptionContext[T any](ctx context.Context, option *Option) *T {
 	t := new(T)
 
 	vt := reflect.TypeOf(t)
+	ctx = pushType(ctx, vt)
+	defer popType(ctx)
 
 	if vt.Kind() == reflect.Ptr && vt.Elem().Kind() == reflect.Struct {
 		vte := vt.Elem()
@@ -150,23 +163,23 @@ func newWithOptionContext[T any](ctx context.Context, option *Option) *T {
 		initMethod, ok := vt.MethodByName(initMethodName)
 		if ok {
 			if initMethod.Type.NumOut() > 0 {
-				panic(fmt.Errorf("Init method '%s' must not have return values", initMethodName))
+				panic(fmt.Errorf("init method '%s' must not have return values", initMethodName))
 			}
 
 			params, err := _getMethodParams(ctx, t, initMethod.Type, option.initParams, initMethod.Name)
 			if err == nil {
 				defer initMethod.Func.Call(append([]reflect.Value{reflect.ValueOf(t)}, params...))
 			} else {
-				panic(fmt.Errorf("Create %s error: %v", vte.Name(), err))
+				panic(fmt.Errorf("create %s error: %v", vte.Name(), err))
 			}
 		}
 	} else {
-		panic("T must be a struct type")
+		panic(errors.New("T must be a struct type"))
 	}
 
 	// do auto wire
 	if err := autoWireContext(ctx, t); err != nil {
-		panic(fmt.Errorf("Create %s error: %v", vt.Elem().Name(), err))
+		panic(fmt.Errorf("create %s error: %v", vt.Elem().Name(), err))
 	}
 
 	return t
