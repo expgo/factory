@@ -141,8 +141,8 @@ func autoWireContext(ctx context.Context, self any) error {
 	}
 
 	vt := reflect.TypeOf(self)
-	_context.wiring(vt)
-	defer _context.wired(vt)
+	ctx = pushType(ctx, vt)
+	defer popType(ctx)
 
 	return structure.WalkWithTagNames(self, []string{TagWire.Name(), TagValue.Name(), TagNew.Name()}, func(fieldValue reflect.Value, structField reflect.StructField, rootValues []reflect.Value, tags map[string]string) (err error) {
 		if len(tags) > 1 {

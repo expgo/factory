@@ -275,25 +275,6 @@ func (c *factoryContext) setByName(name string, cci *contextCachedItem) {
 	}
 }
 
-func (c *factoryContext) wiring(vt reflect.Type) {
-	if vt.Kind() == reflect.Ptr {
-		vt = vt.Elem()
-	}
-
-	_, ok := c.wiringCache.LoadOrStore(vt, true)
-	if ok {
-		panic(fmt.Errorf("%s.%s is wiring, possible circular reference exists.", vt.PkgPath(), vt.Name()))
-	}
-}
-
-func (c *factoryContext) wired(vt reflect.Type) {
-	if vt.Kind() == reflect.Ptr {
-		vt = vt.Elem()
-	}
-
-	c.wiringCache.Delete(vt)
-}
-
 func (c *factoryContext) evalExpr(ctx context.Context, code string) (any, error) {
 	tree, _ := parser.Parse(code)
 
