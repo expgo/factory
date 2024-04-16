@@ -114,7 +114,7 @@ func (s *singleton[T]) InitParams(initParams ...string) *singleton[T] {
 }
 
 func (s *singleton[T]) Get() *T {
-	return s.getWithContext(getTimeoutContext(Opts.DefaultTimeout))
+	return s.getWithContext(getTimeoutContext(Opts.Timeout))
 }
 
 func (s *singleton[T]) getWithContext(ctx context.Context) *T {

@@ -78,7 +78,7 @@ func (s *iInterface[T]) SetInitFunc(initFunc func() T) *iInterface[T] {
 }
 
 func (s *iInterface[T]) Get() T {
-	return s.getWithContext(getTimeoutContext(Opts.DefaultTimeout))
+	return s.getWithContext(getTimeoutContext(Opts.Timeout))
 }
 
 func (s *iInterface[T]) getWithContext(ctx context.Context) T {

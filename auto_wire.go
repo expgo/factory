@@ -128,7 +128,7 @@ func getValueByWireTag(ctx context.Context, self any, tagValue *TagWithValue[Wir
 }
 
 func AutoWire(self any) error {
-	return AutoWireTimeout(self, Opts.DefaultTimeout)
+	return AutoWireTimeout(self, Opts.Timeout)
 }
 
 func AutoWireTimeout(self any, timeout time.Duration) error {

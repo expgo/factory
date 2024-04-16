@@ -118,7 +118,7 @@ func _getMethodParams(ctx context.Context, self any, methodType reflect.Type, me
 }
 
 func NewWithOption[T any](option *Option) *T {
-	return NewWithOptionTimeout[T](option, Opts.DefaultTimeout)
+	return NewWithOptionTimeout[T](option, Opts.Timeout)
 }
 
 func NewWithOptionTimeout[T any](option *Option, timeout time.Duration) *T {

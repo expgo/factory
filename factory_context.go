@@ -62,7 +62,7 @@ func (c *exprContext) setValue(name string, value any) {
 }
 
 func Find[T any]() *T {
-	return FindTimeout[T](Opts.DefaultTimeout)
+	return FindTimeout[T](Opts.Timeout)
 }
 
 func FindTimeout[T any](timeout time.Duration) *T {
@@ -81,7 +81,7 @@ func FindTimeout[T any](timeout time.Duration) *T {
 }
 
 func FindByName[T any](name string) *T {
-	return FindByNameTimeout[T](name, Opts.DefaultTimeout)
+	return FindByNameTimeout[T](name, Opts.Timeout)
 }
 
 func FindByNameTimeout[T any](name string, timeout time.Duration) *T {
@@ -99,7 +99,7 @@ func FindByNameTimeout[T any](name string, timeout time.Duration) *T {
 }
 
 func Range[T any](rangeFunc func(any) bool) {
-	RangeTimeout[T](rangeFunc, Opts.DefaultTimeout)
+	RangeTimeout[T](rangeFunc, Opts.Timeout)
 }
 
 func RangeTimeout[T any](rangeFunc func(any) bool, timeout time.Duration) {

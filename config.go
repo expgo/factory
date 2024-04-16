@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/expgo/generic"
+	"os"
 	"reflect"
+	"strconv"
 	"time"
 )
 
@@ -13,13 +15,32 @@ const GetterKey = "Getter"
 const TypeKey = "type"
 
 var Opts = struct {
-	EnableTimeout          bool
-	DefaultTimeout         time.Duration
-	DefaultTimeoutInterval time.Duration
+	EnableTimeout   bool
+	Timeout         time.Duration
+	TimeoutInterval time.Duration
+	Log             Logger
 }{
-	EnableTimeout:          false,
-	DefaultTimeout:         3 * time.Second,
-	DefaultTimeoutInterval: 100 * time.Millisecond,
+	EnableTimeout:   false,
+	Timeout:         3 * time.Second,
+	TimeoutInterval: 100 * time.Millisecond,
+	Log:             &logger{},
+}
+
+func init() {
+	if b, err := strconv.ParseBool(os.Getenv("FACTORY_ENABLE_TIMEOUT")); err == nil {
+		Opts.EnableTimeout = b
+		Opts.Log.Debugf("EnableTimeout set to %v", b)
+	}
+
+	if n, _ := strconv.Atoi(os.Getenv("FACTORY_TIMEOUT")); n > 0 {
+		Opts.Timeout = time.Duration(n) * time.Second
+		Opts.Log.Debugf("Timeout set to %v", Opts.Timeout)
+	}
+
+	if n, _ := strconv.Atoi(os.Getenv("FACTORY_TIMEOUT_INTERVAL")); n > 0 {
+		Opts.TimeoutInterval = time.Duration(n) * time.Millisecond
+		Opts.Log.Debugf("TimeoutInterval set to %v", Opts.TimeoutInterval)
+	}
 }
 
 func getTimeoutContext(timeout time.Duration) context.Context {
@@ -29,7 +50,7 @@ func getTimeoutContext(timeout time.Duration) context.Context {
 func getNextTimeoutContext(ctx context.Context) context.Context {
 	if Opts.EnableTimeout {
 		duration := getContextTimeout(ctx)
-		duration -= Opts.DefaultTimeoutInterval
+		duration -= Opts.TimeoutInterval
 		if duration <= 0 {
 			panic("need larger DefaultFindTimeout")
 		}
@@ -45,7 +66,7 @@ func getContextTimeout(ctx context.Context) time.Duration {
 		if value != nil {
 			return value.(time.Duration)
 		} else {
-			return Opts.DefaultTimeout
+			return Opts.Timeout
 		}
 	} else {
 		return 0
