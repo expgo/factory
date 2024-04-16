@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/expgo/ag v0.0.0-20240412034540-693d298d12d2
 	github.com/expgo/generic v0.0.0-20240415070051-4357d19d9b70
-	github.com/expgo/structure v0.0.0-20240409145933-0849cfa62db1
+	github.com/expgo/structure v0.0.0-20240416014243-7bc489f56299
 	github.com/expgo/sync v0.0.0-20240415082356-7ff1f8607b7c
 	github.com/expr-lang/expr v1.16.4
 	github.com/stretchr/testify v1.9.0

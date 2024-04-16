@@ -10,6 +10,8 @@ github.com/expgo/generic v0.0.0-20240415070051-4357d19d9b70 h1:u8uBpXKlOBFydfKtz
 github.com/expgo/generic v0.0.0-20240415070051-4357d19d9b70/go.mod h1:Q3Y49UmlJcsKsmbWI6VA4+Z+N66PfJcSOPM+XC/N1y8=
 github.com/expgo/structure v0.0.0-20240409145933-0849cfa62db1 h1:2fcKSKZlBBibWukb7aXbGk7SGVxZSPM1JbwVKtZjp7M=
 github.com/expgo/structure v0.0.0-20240409145933-0849cfa62db1/go.mod h1:5vmNK2QGUV0oovMingawA6CdIIZxKhLjxxq3GLxDNXI=
+github.com/expgo/structure v0.0.0-20240416014243-7bc489f56299 h1:PECPQnMKsL7Wqt0S4Ir9sP5cXnmTbimw23dZ1TnNzu4=
+github.com/expgo/structure v0.0.0-20240416014243-7bc489f56299/go.mod h1:5vmNK2QGUV0oovMingawA6CdIIZxKhLjxxq3GLxDNXI=
 github.com/expgo/sync v0.0.0-20240414145156-d9bdfe3aca0d h1:mEUX3d2EqdAtYysiqWKLbXfMk0mUidB+DoujPizIKwc=
 github.com/expgo/sync v0.0.0-20240414145156-d9bdfe3aca0d/go.mod h1:xsnlCFzkJVsSErRFz2usJhsbY6p6txA7L/rj2XgWyNI=
 github.com/expgo/sync v0.0.0-20240415025832-cd66dc513f1c h1:qj7EOBsbmFuNZkw7i9SEfpy/3fa0Azq1YXMy8s+Ux0s=
