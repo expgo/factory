@@ -3,7 +3,6 @@ package factory
 import (
 	"context"
 	"fmt"
-	"github.com/expgo/generic"
 	"os"
 	"reflect"
 	"strconv"
@@ -76,12 +75,12 @@ func getContextTimeout(ctx context.Context) time.Duration {
 func pushGetter(ctx context.Context, ci *contextCachedItem) context.Context {
 	ciSetValue := ctx.Value(GetterKey)
 	if ciSetValue == nil {
-		ciSetValue = &generic.Set[*contextCachedItem]{}
+		ciSetValue = &setStack[*contextCachedItem]{}
 		ctx = context.WithValue(ctx, GetterKey, ciSetValue)
 	}
 
-	ciSet := ciSetValue.(*generic.Set[*contextCachedItem])
-	if !ciSet.Add(ci) {
+	ciSet := ciSetValue.(*setStack[*contextCachedItem])
+	if !ciSet.Push(ci) {
 		panic(fmt.Errorf("getting %s, possible circular reference with %s", ci._type.String(), lastGetter(ctx)))
 	}
 	return ctx
@@ -90,43 +89,35 @@ func pushGetter(ctx context.Context, ci *contextCachedItem) context.Context {
 func popGetter(ctx context.Context) {
 	ciSetValue := ctx.Value(GetterKey)
 	if ciSetValue != nil {
-		ciSet := ciSetValue.(*generic.Set[*contextCachedItem])
-		idx := ciSet.Size() - 1
-		if idx >= 0 {
-			ciSet.RemoveAt(idx)
-		}
+		ciSet := ciSetValue.(*setStack[*contextCachedItem])
+		ciSet.Pop()
 	}
 }
 
 func lastGetter(ctx context.Context) string {
 	ciSetValue := ctx.Value(GetterKey)
 	if ciSetValue != nil {
-		ciSet := ciSetValue.(*generic.Set[*contextCachedItem])
-		lastIdx := ciSet.Size() - 1
-		if lastIdx >= 0 {
-			ci, err := ciSet.At(lastIdx)
-			if err != nil {
-				return ""
-			}
-			return ci._type.String()
+		ciSet := ciSetValue.(*setStack[*contextCachedItem])
+		if last, ok := ciSet.Last(); ok {
+			return last._type.String()
 		}
 	}
 	return ""
 }
 
 func initTypeCtx(ctx context.Context) context.Context {
-	return context.WithValue(ctx, TypeKey, &generic.Set[reflect.Type]{})
+	return context.WithValue(ctx, TypeKey, &setStack[reflect.Type]{})
 }
 
 func pushType(ctx context.Context, _type reflect.Type) context.Context {
 	typeSetValue := ctx.Value(TypeKey)
 	if typeSetValue == nil {
-		typeSetValue = &generic.Set[reflect.Type]{}
+		typeSetValue = &setStack[reflect.Type]{}
 		ctx = context.WithValue(ctx, TypeKey, typeSetValue)
 	}
 
-	typeSet := typeSetValue.(*generic.Set[reflect.Type])
-	if !typeSet.Add(_type) {
+	typeSet := typeSetValue.(*setStack[reflect.Type])
+	if !typeSet.Push(_type) {
 		panic(fmt.Errorf("getting %s, possible circular reference with %s", _type.String(), lastType(ctx)))
 	}
 	return ctx
@@ -135,25 +126,17 @@ func pushType(ctx context.Context, _type reflect.Type) context.Context {
 func popType(ctx context.Context) {
 	typeSetValue := ctx.Value(TypeKey)
 	if typeSetValue != nil {
-		ciSet := typeSetValue.(*generic.Set[reflect.Type])
-		idx := ciSet.Size() - 1
-		if idx >= 0 {
-			ciSet.RemoveAt(idx)
-		}
+		ciSet := typeSetValue.(*setStack[reflect.Type])
+		ciSet.Pop()
 	}
 }
 
 func lastType(ctx context.Context) string {
 	typeSetValue := ctx.Value(TypeKey)
 	if typeSetValue != nil {
-		typeSet := typeSetValue.(*generic.Set[reflect.Type])
-		lastIdx := typeSet.Size() - 1
-		if lastIdx >= 0 {
-			_type, err := typeSet.At(lastIdx)
-			if err != nil {
-				return ""
-			}
-			return _type.String()
+		typeSet := typeSetValue.(*setStack[reflect.Type])
+		if last, ok := typeSet.Last(); ok {
+			return last.String()
 		}
 	}
 	return ""

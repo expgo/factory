@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/expgo/ag/api"
 	"github.com/expgo/factory"
-	"github.com/expgo/generic/stream"
 	"io"
+	"sort"
 	"strings"
 )
 
@@ -20,8 +20,15 @@ func (g *PluginGenerator) GetImports() []string {
 }
 
 func (g *PluginGenerator) WriteConst(wr io.Writer) error {
-	if stream.Must(stream.Of(g.singletons).AnyMatch(func(s *Singleton) (bool, error) { return s.LocalVar || s.LocalGetter, nil })) {
+	anyMatch := false
+	for _, s := range g.singletons {
+		if s.LocalVar || s.LocalGetter {
+			anyMatch = true
+			break
+		}
+	}
 
+	if anyMatch {
 		buf := bytes.NewBuffer([]byte{})
 
 		buf.WriteString("var(\n")
@@ -44,8 +51,15 @@ func (g *PluginGenerator) WriteConst(wr io.Writer) error {
 }
 
 func (g *PluginGenerator) WriteInitFunc(wr io.Writer) error {
-	if stream.Must(stream.Of(g.singletons).AnyMatch(func(s *Singleton) (bool, error) { return !(s.LocalVar || s.LocalGetter), nil })) ||
-		len(g.factories) > 0 {
+	anyMatch := false
+	for _, s := range g.singletons {
+		if !(s.LocalVar || s.LocalGetter) {
+			anyMatch = true
+			break
+		}
+	}
+
+	if anyMatch || len(g.factories) > 0 {
 		buf := bytes.NewBuffer([]byte{})
 
 		buf.WriteString("func init() {\n")
@@ -95,7 +109,15 @@ func (g *PluginGenerator) WriteBody(wr io.Writer) error {
 }
 
 func newGenerator(singletons []*Singleton, factories []*Factory) (api.Generator, error) {
-	sortedSingletons := stream.Must(stream.Of(singletons).Sort(func(x, y *Singleton) int { return strings.Compare(x.typeName, y.typeName) }).ToSlice())
-	sortedFactories := stream.Must(stream.Of(factories).Sort(func(x, y *Factory) int { return strings.Compare(x.funcName, y.funcName) }).ToSlice())
+	sortedSingletons := append([]*Singleton(nil), singletons...)
+	sort.Slice(sortedSingletons, func(i, j int) bool {
+		return strings.Compare(sortedSingletons[i].typeName, sortedSingletons[j].typeName) < 0
+	})
+
+	sortedFactories := append([]*Factory(nil), factories...)
+	sort.Slice(sortedFactories, func(i, j int) bool {
+		return strings.Compare(sortedFactories[i].funcName, sortedFactories[j].funcName) < 0
+	})
+
 	return &PluginGenerator{sortedSingletons, sortedFactories}, nil
 }

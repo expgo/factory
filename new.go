@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/expgo/generic"
 	"github.com/expgo/sync"
 	"reflect"
 	"strings"
@@ -18,7 +17,8 @@ import (
 // The DefaultInitMethodName is used in reflection to find and invoke the initialization method.
 const DefaultInitMethodName = "Init"
 
-var newCtxMap generic.Map[int, context.Context]
+var newCtxMap = make(map[int]context.Context)
+var newCtxMapLock = sync.NewRWMutex()
 
 type Option struct {
 	useConstructor bool
@@ -123,10 +123,22 @@ func NewWithOption[T any](option *Option) *T {
 
 func NewWithOptionTimeout[T any](option *Option, timeout time.Duration) *T {
 	goId := sync.GoId()
-	ctx, loaded := newCtxMap.LoadOrStore(goId, initTypeCtx(getTimeoutContext(timeout)))
+	newCtxMapLock.RLock()
+
+	ctx, loaded := newCtxMap[goId]
+	newCtxMapLock.RUnlock()
+
 	if !loaded {
+		ctx = initTypeCtx(getNextTimeoutContext(ctx))
+
+		newCtxMapLock.Lock()
+		newCtxMap[goId] = ctx
+		newCtxMapLock.Unlock()
+
 		defer func() {
-			newCtxMap.Delete(goId)
+			newCtxMapLock.Lock()
+			delete(newCtxMap, goId)
+			newCtxMapLock.Unlock()
 		}()
 	}
 

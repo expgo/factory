@@ -5,7 +5,6 @@ import (
 	"encoding"
 	"errors"
 	"fmt"
-	"github.com/expgo/generic/stream"
 	"github.com/expgo/structure"
 	"reflect"
 	"strings"
@@ -34,9 +33,13 @@ func (tv *TagWithValue[T]) String() string {
 
 func ParseTagValue(tagValue string, checkAndSet func(tv *TagWithValue[WireValue])) (tv *TagWithValue[WireValue], err error) {
 	result := &TagWithValue[WireValue]{}
-	values := stream.Must(stream.Of(strings.SplitN(strings.TrimSpace(tagValue), ":", 2)).
-		Map(func(s string) (string, error) { return strings.TrimSpace(s), nil }).
-		Filter(func(s string) (bool, error) { return len(s) > 0, nil }).ToSlice())
+
+	var values []string
+	for _, v := range strings.SplitN(strings.TrimSpace(tagValue), ":", 2) {
+		if s := strings.TrimSpace(v); len(s) > 0 {
+			values = append(values, s)
+		}
+	}
 
 	if len(values) == 0 {
 		return nil, errors.New("tag value is empty")
@@ -147,7 +150,10 @@ func autoWireContext(ctx context.Context, self any) error {
 
 		if newValue, ok := tags[TagNew.Name()]; ok {
 			// new， create by factory
-			f, loaded := factories.Load(structField.Type)
+			factoriesLock.RLock()
+			f, loaded := factories[structField.Type]
+			factoriesLock.RUnlock()
+
 			if !loaded {
 				return fmt.Errorf("can't get factory type of %s", structField.Type.String())
 			}

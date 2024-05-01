@@ -3,7 +3,6 @@ package factory
 import (
 	"context"
 	"fmt"
-	"github.com/expgo/generic"
 	"github.com/expgo/sync"
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/ast"
@@ -13,18 +12,23 @@ import (
 )
 
 var _context = &factoryContext{
-	exprEnvMap:  make(map[string]any),
-	exprEnvLock: sync.NewRWMutex(),
+	typedMap:     make(map[reflect.Type]*contextCachedItem),
+	typedMapLock: sync.NewRWMutex(),
+	namedMap:     make(map[string]*contextCachedItem),
+	namedMapLock: sync.NewRWMutex(),
+	exprEnvMap:   make(map[string]any),
+	exprEnvLock:  sync.NewRWMutex(),
 }
 
 type Getter func(ctx context.Context) any
 
 type factoryContext struct {
-	typedMap    generic.Map[reflect.Type, *contextCachedItem] // package:name -> must builder
-	namedMap    generic.Map[string, *contextCachedItem]       // name -> must builder
-	wiringCache generic.Map[reflect.Type, bool]
-	exprEnvMap  map[string]any
-	exprEnvLock sync.RWMutex
+	typedMap     map[reflect.Type]*contextCachedItem // package:name -> must builder
+	typedMapLock sync.RWMutex
+	namedMap     map[string]*contextCachedItem // name -> must builder
+	namedMapLock sync.RWMutex
+	exprEnvMap   map[string]any
+	exprEnvLock  sync.RWMutex
 }
 
 type contextCachedItem struct {
@@ -115,12 +119,15 @@ func rangeContext[T any](rangeFunc func(any) bool, ctx context.Context) {
 		panic("Range only range type and interface")
 	}
 
-	_context.typedMap.Range(func(k reflect.Type, v *contextCachedItem) bool {
+	_context.typedMapLock.RLock()
+	clonedMap := cloneMap(_context.typedMap)
+	_context.typedMapLock.RUnlock()
+
+	for k, v := range clonedMap {
 		if k.ConvertibleTo(vt) {
-			return rangeFunc(v.getter(ctx))
+			rangeFunc(v.getter(ctx))
 		}
-		return true
-	})
+	}
 }
 
 func RangeStruct[T any](structFunc func(*T) bool) {
@@ -186,7 +193,9 @@ func (c *factoryContext) getByNameOrType(ctx context.Context, name string, vt re
 }
 
 func (c *factoryContext) getByType(ctx context.Context, vt reflect.Type) any {
-	mb, ok := c.typedMap.Load(vt)
+	c.typedMapLock.RLock()
+	mb, ok := c.typedMap[vt]
+	c.typedMapLock.RUnlock()
 
 	if ok {
 		ctx = pushGetter(ctx, mb)
@@ -197,22 +206,29 @@ func (c *factoryContext) getByType(ctx context.Context, vt reflect.Type) any {
 
 	if vt.Kind() == reflect.Interface {
 		// 需求是接口才使用下面方法找寻
-		convertibleList := c.typedMap.Filter(func(k reflect.Type, v *contextCachedItem) bool {
-			return k.ConvertibleTo(vt)
-		})
+		c.typedMapLock.RLock()
+		clonedMap := cloneMap(c.typedMap)
+		c.typedMapLock.RUnlock()
 
-		convertibleListSize := convertibleList.Size()
+		convertibleMap := make(map[reflect.Type]*contextCachedItem)
+		for k, v := range clonedMap {
+			if k.ConvertibleTo(vt) {
+				convertibleMap[k] = v
+			}
+		}
 
-		if convertibleListSize > 1 {
+		convertibleMapSize := len(convertibleMap)
+
+		if convertibleMapSize > 1 {
 			panic(fmt.Errorf("Multiple default builders found for type: %v, please use named singleton", vt))
 		}
 
-		if convertibleListSize == 1 {
-			convertibleList.Range(func(k reflect.Type, v *contextCachedItem) bool {
+		if convertibleMapSize == 1 {
+			for _, v := range convertibleMap {
 				mb = v
 				ok = true
-				return false
-			})
+				break
+			}
 
 			if ok {
 				ctx = pushGetter(ctx, mb)
@@ -233,10 +249,15 @@ func (c *factoryContext) getByType(ctx context.Context, vt reflect.Type) any {
 }
 
 func (c *factoryContext) setByType(vt reflect.Type, cci *contextCachedItem) {
-	_, getOk := c.typedMap.LoadOrStore(vt, cci)
+	c.typedMapLock.Lock()
+	defer c.typedMapLock.Unlock()
+
+	_, getOk := c.typedMap[vt]
 	if getOk {
 		panic(fmt.Errorf("Default builder allready exist: %s", vt.String()))
 	}
+
+	c.typedMap[vt] = cci
 }
 
 func (c *factoryContext) getByNamePanic(ctx context.Context, name string, vt reflect.Type) any {
@@ -248,7 +269,9 @@ func (c *factoryContext) getByNamePanic(ctx context.Context, name string, vt ref
 }
 
 func (c *factoryContext) getByName(ctx context.Context, name string, vt reflect.Type) (any, error) {
-	mb, ok := c.namedMap.Load(name)
+	c.namedMapLock.RLock()
+	mb, ok := c.namedMap[name]
+	c.namedMapLock.RUnlock()
 
 	if ok {
 		ctx = pushGetter(ctx, mb)
@@ -269,10 +292,15 @@ func (c *factoryContext) getByName(ctx context.Context, name string, vt reflect.
 }
 
 func (c *factoryContext) setByName(name string, cci *contextCachedItem) {
-	_, getOk := c.namedMap.LoadOrStore(name, cci)
+	c.namedMapLock.Lock()
+	defer c.namedMapLock.Unlock()
+
+	_, getOk := c.namedMap[name]
 	if getOk {
 		panic(fmt.Errorf("Named builder allready exist: %s", name))
 	}
+
+	c.namedMap[name] = cci
 }
 
 func (c *factoryContext) evalExpr(ctx context.Context, code string) (any, error) {
@@ -285,4 +313,14 @@ func (c *factoryContext) evalExpr(ctx context.Context, code string) (any, error)
 	defer c.exprEnvLock.RUnlock()
 
 	return expr.Eval(code, c.exprEnvMap)
+}
+
+func cloneMap[K comparable, V any](originalMap map[K]V) map[K]V {
+	cloned := make(map[K]V)
+
+	for key, value := range originalMap {
+		cloned[key] = value
+	}
+
+	return cloned
 }

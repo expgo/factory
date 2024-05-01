@@ -3,14 +3,15 @@ package factory
 import (
 	"context"
 	"fmt"
-	"github.com/expgo/generic"
 	"github.com/expgo/structure"
+	"github.com/expgo/sync"
 	"reflect"
 )
 
 const NewMethodName = "New"
 
-var factories = generic.Map[reflect.Type, *_factory]{}
+var factories = make(map[reflect.Type]*_factory)
+var factoriesLock = sync.NewRWMutex()
 
 type _factory struct {
 	factory     any
@@ -87,10 +88,17 @@ func Factory[T any](f any) *_factory {
 		methodName:  NewMethodName,
 	}
 
-	_, loaded := factories.LoadOrStore(vt, fac)
+	factoriesLock.RLock()
+	_, loaded := factories[vt]
+	factoriesLock.RUnlock()
+
 	if loaded {
 		panic(fmt.Errorf("factory already exist: %s", vt.String()))
 	}
+
+	factoriesLock.Lock()
+	factories[vt] = fac
+	factoriesLock.Unlock()
 
 	return fac
 }

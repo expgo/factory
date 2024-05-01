@@ -2,9 +2,10 @@ module github.com/expgo/factory
 
 go 1.20
 
+replace github.com/expgo/structure => /home/mind/peace/expgo/structure
+
 require (
 	github.com/expgo/ag v0.0.0-20240412034540-693d298d12d2
-	github.com/expgo/generic v0.0.0-20240415070051-4357d19d9b70
 	github.com/expgo/structure v0.0.0-20240416014243-7bc489f56299
 	github.com/expgo/sync v0.0.0-20240415082356-7ff1f8607b7c
 	github.com/expr-lang/expr v1.16.4
