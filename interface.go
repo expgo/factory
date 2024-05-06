@@ -8,10 +8,10 @@ import (
 	"strings"
 )
 
-type iInterface[T any] struct {
+type iInterface struct {
 	once     sync.Once
-	obj      T
-	initFunc func() T
+	obj      any
+	initFunc func() any
 
 	_name string
 	lock  sync.Mutex
@@ -19,15 +19,15 @@ type iInterface[T any] struct {
 	cci *contextCachedItem
 }
 
-func _interface[T any]() *iInterface[T] {
-	result := &iInterface[T]{
+func _interfaceWithType(vt reflect.Type) *iInterface {
+	result := &iInterface{
 		once: sync.NewOnce(),
 		lock: sync.NewMutex(),
 	}
 
 	result.cci = &contextCachedItem{}
 
-	result.cci._type = reflect.TypeOf((*T)(nil)).Elem()
+	result.cci._type = vt
 
 	result.cci.getter = func(ctx context.Context) any {
 		return result.getWithContext(ctx)
@@ -36,21 +36,20 @@ func _interface[T any]() *iInterface[T] {
 	return result
 }
 
-func Interface[T any]() *iInterface[T] {
-	result := _interface[T]()
-
-	_context.setByType(result.cci._type, result.cci)
-
-	return result
+func Interface[T any]() *iInterface {
+	return _interfaceWithType(reflect.TypeOf((*T)(nil)).Elem()).setType()
 }
 
-func NamedInterface[T any](name string) *iInterface[T] {
-	result := _interface[T]()
-
-	return result.Name(name)
+func NamedInterface[T any](name string) *iInterface {
+	return _interfaceWithType(reflect.TypeOf((*T)(nil)).Elem()).Name(name)
 }
 
-func (s *iInterface[T]) Name(name string) *iInterface[T] {
+func (s *iInterface) setType() *iInterface {
+	_context.setByType(s.cci._type, s.cci)
+	return s
+}
+
+func (s *iInterface) Name(name string) *iInterface {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -69,7 +68,7 @@ func (s *iInterface[T]) Name(name string) *iInterface[T] {
 	return s
 }
 
-func (s *iInterface[T]) SetInitFunc(initFunc func() T) *iInterface[T] {
+func (s *iInterface) SetInitFunc(initFunc func() any) *iInterface {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -77,11 +76,7 @@ func (s *iInterface[T]) SetInitFunc(initFunc func() T) *iInterface[T] {
 	return s
 }
 
-func (s *iInterface[T]) Get() T {
-	return s.getWithContext(getTimeoutContext(Opts.Timeout))
-}
-
-func (s *iInterface[T]) getWithContext(ctx context.Context) T {
+func (s *iInterface) getWithContext(ctx context.Context) any {
 	timeout := getContextTimeout(ctx)
 	err := s.once.DoTimeout(timeout, func() error {
 		if s.initFunc != nil {
@@ -99,8 +94,8 @@ func (s *iInterface[T]) getWithContext(ctx context.Context) T {
 	return s.obj
 }
 
-func (s *iInterface[T]) Getter() func() T {
+func IGetter[T any](s *iInterface) func() T {
 	return func() T {
-		return s.Get()
+		return s.getWithContext(getTimeoutContext(Opts.Timeout)).(T)
 	}
 }

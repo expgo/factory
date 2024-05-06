@@ -76,7 +76,10 @@ func (f *_factory) CheckValid() {
 }
 
 func Factory[T any](f any) *_factory {
-	vt := reflect.TypeOf((*T)(nil))
+	return FactoryWithType(reflect.TypeOf((*T)(nil)), f)
+}
+
+func FactoryWithType(vt reflect.Type, f any) *_factory {
 	if vt.Elem().Kind() == reflect.Interface {
 		vt = vt.Elem()
 	}
