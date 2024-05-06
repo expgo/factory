@@ -3,6 +3,7 @@ package factory
 import (
 	"context"
 	"fmt"
+	"github.com/expgo/structure"
 	"github.com/expgo/sync"
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/ast"
@@ -120,7 +121,7 @@ func rangeContext[T any](rangeFunc func(any) bool, ctx context.Context) {
 	}
 
 	_context.typedMapLock.RLock()
-	clonedMap := cloneMap(_context.typedMap)
+	clonedMap := structure.CloneMap(_context.typedMap)
 	_context.typedMapLock.RUnlock()
 
 	for k, v := range clonedMap {
@@ -207,7 +208,7 @@ func (c *factoryContext) getByType(ctx context.Context, vt reflect.Type) any {
 	if vt.Kind() == reflect.Interface {
 		// 需求是接口才使用下面方法找寻
 		c.typedMapLock.RLock()
-		clonedMap := cloneMap(c.typedMap)
+		clonedMap := structure.CloneMap(c.typedMap)
 		c.typedMapLock.RUnlock()
 
 		convertibleMap := make(map[reflect.Type]*contextCachedItem)
@@ -313,14 +314,4 @@ func (c *factoryContext) evalExpr(ctx context.Context, code string) (any, error)
 	defer c.exprEnvLock.RUnlock()
 
 	return expr.Eval(code, c.exprEnvMap)
-}
-
-func cloneMap[K comparable, V any](originalMap map[K]V) map[K]V {
-	cloned := make(map[K]V)
-
-	for key, value := range originalMap {
-		cloned[key] = value
-	}
-
-	return cloned
 }

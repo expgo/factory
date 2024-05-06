@@ -2,6 +2,8 @@ github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/expgo/ag v0.0.0-20240412034540-693d298d12d2 h1:mEm8Ms3A2637QOpqSn8+euqS3vVKkmYKlRmcbebKzL8=
 github.com/expgo/ag v0.0.0-20240412034540-693d298d12d2/go.mod h1:WrYJWyh2eay6luc54PW14wr1bvFuz4GtOTOroLULelU=
+github.com/expgo/structure v0.0.0-20240430162200-172eb0aa3964 h1:0rxwAopHSYIfm/lyHtf4/ZM4NWB/Q1TKxxyHuaSyxIg=
+github.com/expgo/structure v0.0.0-20240430162200-172eb0aa3964/go.mod h1:tsjqeBHjL+mbqq0OtKdvEqGXAlZpSCzJjFipV9gW/QI=
 github.com/expgo/sync v0.0.0-20240415082356-7ff1f8607b7c h1:mVzlNfq0PLqXzA26OBAe9nfIQCca69GF28p+6hGSk+U=
 github.com/expgo/sync v0.0.0-20240415082356-7ff1f8607b7c/go.mod h1:xsnlCFzkJVsSErRFz2usJhsbY6p6txA7L/rj2XgWyNI=
 github.com/expr-lang/expr v1.16.4 h1:1Mq5RHw5T5jxXMUvyb+eT546mJREm1yFyNHkybYQ81c=
