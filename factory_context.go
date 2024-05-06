@@ -21,8 +21,6 @@ var _context = &factoryContext{
 	exprEnvLock:  sync.NewRWMutex(),
 }
 
-type Getter func(ctx context.Context) any
-
 type factoryContext struct {
 	typedMap     map[reflect.Type]*contextCachedItem // package:name -> must builder
 	typedMapLock sync.RWMutex
@@ -34,7 +32,7 @@ type factoryContext struct {
 
 type contextCachedItem struct {
 	_type  reflect.Type
-	getter Getter
+	getter func(ctx context.Context) any
 }
 
 type exprContext struct {

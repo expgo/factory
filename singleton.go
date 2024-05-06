@@ -9,10 +9,10 @@ import (
 	"time"
 )
 
-type singleton[T any] struct {
+type singleton struct {
 	once     sync.Once
-	obj      *T
-	initFunc func() *T
+	obj      any
+	initFunc func() any
 	option   Option
 
 	_name string
@@ -21,8 +21,8 @@ type singleton[T any] struct {
 	cci *contextCachedItem
 }
 
-func _singleton[T any]() *singleton[T] {
-	result := &singleton[T]{
+func _singletonWithType(vt reflect.Type) *singleton {
+	result := &singleton{
 		once: sync.NewOnce(),
 		lock: sync.NewMutex(),
 		option: Option{
@@ -32,7 +32,7 @@ func _singleton[T any]() *singleton[T] {
 
 	result.cci = &contextCachedItem{}
 
-	result.cci._type = reflect.TypeOf((*T)(nil))
+	result.cci._type = vt
 
 	result.cci.getter = func(ctx context.Context) any {
 		return result.getWithContext(ctx)
@@ -41,21 +41,23 @@ func _singleton[T any]() *singleton[T] {
 	return result
 }
 
-func Singleton[T any]() *singleton[T] {
-	result := _singleton[T]()
+func Singleton[T any]() *singleton {
+	result := _singletonWithType(reflect.TypeOf((*T)(nil)))
+	result.obj = new(T)
 
 	_context.setByType(result.cci._type, result.cci)
 
 	return result
 }
 
-func NamedSingleton[T any](name string) *singleton[T] {
-	result := _singleton[T]()
+func NamedSingleton[T any](name string) *singleton {
+	result := _singletonWithType(reflect.TypeOf((*T)(nil)))
+	result.obj = new(T)
 
 	return result.Name(name)
 }
 
-func (s *singleton[T]) Name(name string) *singleton[T] {
+func (s *singleton) Name(name string) *singleton {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -74,7 +76,7 @@ func (s *singleton[T]) Name(name string) *singleton[T] {
 	return s
 }
 
-func (s *singleton[T]) WithOption(option *Option) *singleton[T] {
+func (s *singleton) WithOption(option *Option) *singleton {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -90,7 +92,7 @@ func (s *singleton[T]) WithOption(option *Option) *singleton[T] {
 	return s
 }
 
-func (s *singleton[T]) SetInitFunc(initFunc func() *T) *singleton[T] {
+func (s *singleton) SetInitFunc(initFunc func() any) *singleton {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -98,32 +100,28 @@ func (s *singleton[T]) SetInitFunc(initFunc func() *T) *singleton[T] {
 	return s
 }
 
-func (s *singleton[T]) UseConstructor(useConstructor bool) *singleton[T] {
+func (s *singleton) UseConstructor(useConstructor bool) *singleton {
 	s.option.UseConstructor(useConstructor)
 	return s
 }
 
-func (s *singleton[T]) InitMethodName(initMethodName string) *singleton[T] {
+func (s *singleton) InitMethodName(initMethodName string) *singleton {
 	s.option.InitMethodName(initMethodName)
 	return s
 }
 
-func (s *singleton[T]) InitParams(initParams ...string) *singleton[T] {
+func (s *singleton) InitParams(initParams ...string) *singleton {
 	s.option.InitParams(initParams...)
 	return s
 }
 
-func (s *singleton[T]) Get() *T {
-	return s.getWithContext(getTimeoutContext(Opts.Timeout))
-}
-
-func (s *singleton[T]) getWithContext(ctx context.Context) *T {
+func (s *singleton) getWithContext(ctx context.Context) any {
 	timeout := getContextTimeout(ctx)
 	err := s.once.DoTimeout(timeout, func() error {
 		if s.initFunc != nil {
 			s.obj = s.initFunc()
 		} else {
-			s.obj = initWithOptionContext(new(T), getNextTimeoutContext(ctx), &s.option).(*T)
+			s.obj = initWithOptionContext(s.obj, getNextTimeoutContext(ctx), &s.option)
 		}
 
 		return nil
@@ -136,8 +134,8 @@ func (s *singleton[T]) getWithContext(ctx context.Context) *T {
 	return s.obj
 }
 
-func (s *singleton[T]) Getter() func() *T {
+func Getter[T any](s *singleton) func() *T {
 	return func() *T {
-		return s.Get()
+		return s.getWithContext(getTimeoutContext(Opts.Timeout)).(*T)
 	}
 }

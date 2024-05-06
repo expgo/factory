@@ -50,18 +50,18 @@ func (c *cat) Meow() string {
 }
 
 func TestSingletonBuilder(t *testing.T) {
-	var c = Singleton[cat]().Getter()
+	var c = Getter[cat](Singleton[cat]())
 
 	assert.Equal(t, "meow", c().Meow())
 	assert.Equal(t, "cat", c().Name)
 	assert.Equal(t, "animal", c().animal.Name)
 
-	var d = Singleton[dog]().Getter()
+	var d = Getter[dog](Singleton[dog]())
 
 	assert.Equal(t, "dog", d().Name)
 	assert.Equal(t, "dog", d().animal.Name)
 
-	var c1 = Singleton[cat1]().Getter()
+	var c1 = Getter[cat1](Singleton[cat1]())
 	assert.Equal(t, "cat1", c1().Name)
 	assert.Equal(t, "animal", c1().animal.Name)
 }

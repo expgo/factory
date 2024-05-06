@@ -5,5 +5,5 @@ import (
 )
 
 func init() {
-	NamedSingleton[map[string]string]("env").SetInitFunc(func() *map[string]string { return envToMap(os.Environ()) })
+	NamedSingleton[map[string]string]("env").SetInitFunc(func() any { return envToMap(os.Environ()) })
 }

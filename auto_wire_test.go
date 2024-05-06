@@ -14,7 +14,7 @@ type DoInf interface {
 	Hello() string
 }
 
-var _baseStruct = Singleton[BaseStruct]().Getter()
+var _baseStruct = Getter[BaseStruct](Singleton[BaseStruct]())
 
 type BaseStruct struct {
 	self DoInf  `wire:"self"`
@@ -30,13 +30,13 @@ func (b *BaseStruct) Hello() string {
 	return fmt.Sprintf("Hello(%s): base struct", b.name)
 }
 
-var _extStruct = Singleton[ExtStruct]().Getter()
+var _extStruct = Getter[ExtStruct](Singleton[ExtStruct]())
 
 type ExtStruct struct {
 	BaseStruct
 }
 
-var _cfg = Singleton[Cfg]().Name("cfg").Getter()
+var _cfg = Getter[Cfg](Singleton[Cfg]().Name("cfg"))
 
 type Cfg struct {
 	Name string

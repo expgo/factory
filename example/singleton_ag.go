@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	__LocalVarMyStruct = factory.Singleton[LocalVarMyStruct]().InitParams("aaa", "bbb").Get()
+	__LocalVarMyStruct = factory.Singleton[LocalVarMyStruct]().InitParams("aaa", "bbb")
 )
 
 func init() {
