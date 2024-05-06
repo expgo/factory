@@ -34,6 +34,8 @@ func _singletonWithType(vt reflect.Type) *singleton {
 
 	result.cci._type = vt
 
+	result.obj = reflect.New(vt.Elem()).Interface()
+
 	result.cci.getter = func(ctx context.Context) any {
 		return result.getWithContext(ctx)
 	}
@@ -42,19 +44,16 @@ func _singletonWithType(vt reflect.Type) *singleton {
 }
 
 func Singleton[T any]() *singleton {
-	result := _singletonWithType(reflect.TypeOf((*T)(nil)))
-	result.obj = new(T)
-
-	_context.setByType(result.cci._type, result.cci)
-
-	return result
+	return _singletonWithType(reflect.TypeOf((*T)(nil))).setType()
 }
 
 func NamedSingleton[T any](name string) *singleton {
-	result := _singletonWithType(reflect.TypeOf((*T)(nil)))
-	result.obj = new(T)
+	return _singletonWithType(reflect.TypeOf((*T)(nil))).Name(name)
+}
 
-	return result.Name(name)
+func (s *singleton) setType() *singleton {
+	_context.setByType(s.cci._type, s.cci)
+	return s
 }
 
 func (s *singleton) Name(name string) *singleton {
