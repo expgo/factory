@@ -5,5 +5,5 @@ package example
 // @Singleton(Init={"aaa", "bbb"})
 type MyStruct struct{}
 
-// @Singleton(Init={"aaa", "bbb"}, localVar)
+// @Singleton(Init={"aaa", "bbb"}, localGetter)
 type LocalVarMyStruct struct{}

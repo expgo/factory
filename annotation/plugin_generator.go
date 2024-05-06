@@ -22,7 +22,7 @@ func (g *PluginGenerator) GetImports() []string {
 func (g *PluginGenerator) WriteConst(wr io.Writer) error {
 	anyMatch := false
 	for _, s := range g.singletons {
-		if s.LocalVar || s.LocalGetter {
+		if s.LocalGetter {
 			anyMatch = true
 			break
 		}
@@ -34,7 +34,7 @@ func (g *PluginGenerator) WriteConst(wr io.Writer) error {
 		buf.WriteString("var(\n")
 
 		for _, s := range g.singletons {
-			if s.LocalVar || s.LocalGetter {
+			if s.LocalGetter {
 				if err := s.WriteString(buf); err != nil {
 					return err
 				}
@@ -53,7 +53,7 @@ func (g *PluginGenerator) WriteConst(wr io.Writer) error {
 func (g *PluginGenerator) WriteInitFunc(wr io.Writer) error {
 	anyMatch := false
 	for _, s := range g.singletons {
-		if !(s.LocalVar || s.LocalGetter) {
+		if !s.LocalGetter {
 			anyMatch = true
 			break
 		}
@@ -88,7 +88,7 @@ func (g *PluginGenerator) WriteInitFunc(wr io.Writer) error {
 		}
 
 		for _, s := range g.singletons {
-			if !(s.LocalVar || s.LocalGetter) {
+			if !s.LocalGetter {
 				if err := s.WriteString(buf); err != nil {
 					return err
 				}

@@ -11,7 +11,6 @@ type Singleton struct {
 	NamedOnly      bool   `value:"false"`
 	UseConstructor bool   `value:"false"`
 	LazyInit       bool   `value:"true"`
-	LocalVar       bool   `value:"false"`
 	LocalGetter    bool   `value:"false"`
 	LocalPrefix    string `value:"__"`
 	InitMethod     string
@@ -19,23 +18,9 @@ type Singleton struct {
 	typeName       string
 }
 
-func (s *Singleton) SetLocalVar(localVar bool) {
-	s.LocalVar = localVar
-	if localVar {
-		s.LocalGetter = false
-	}
-}
-
-func (s *Singleton) SetLocalGetter(localGetter bool) {
-	s.LocalGetter = localGetter
-	if localGetter {
-		s.LocalVar = false
-	}
-}
-
 func (s *Singleton) WriteString(buf io.StringWriter) error {
-	if s.LocalVar || s.LocalGetter {
-		buf.WriteString(fmt.Sprintf("%s%s = ", s.LocalPrefix, s.typeName))
+	if s.LocalGetter {
+		buf.WriteString(fmt.Sprintf("%s%s = factory.Getter[%s](", s.LocalPrefix, s.typeName, s.typeName))
 	}
 
 	if s.NamedOnly {
@@ -68,10 +53,8 @@ func (s *Singleton) WriteString(buf io.StringWriter) error {
 		buf.WriteString(fmt.Sprintf(`.InitParams(%s)`, strings.Join(quoted, ",")))
 	}
 
-	if s.LocalVar || !s.LazyInit {
-		buf.WriteString(".Get()")
-	} else if s.LocalGetter {
-		buf.WriteString(".Getter()")
+	if s.LocalGetter {
+		buf.WriteString(")")
 	}
 
 	buf.WriteString("\n")
