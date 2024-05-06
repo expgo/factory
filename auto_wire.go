@@ -22,17 +22,17 @@ type Tag string
 // @Enum{self, auto, type, name, value}
 type WireValue string
 
-type TagWithValue[T any] struct {
-	Tag   T
+type TagWithValue struct {
+	Tag   WireValue
 	Value string
 }
 
-func (tv *TagWithValue[T]) String() string {
+func (tv *TagWithValue) String() string {
 	return fmt.Sprintf("%v:%s", tv.Tag, tv.Value)
 }
 
-func ParseTagValue(tagValue string, checkAndSet func(tv *TagWithValue[WireValue])) (tv *TagWithValue[WireValue], err error) {
-	result := &TagWithValue[WireValue]{}
+func ParseTagValue(tagValue string, checkAndSet func(tv *TagWithValue)) (tv *TagWithValue, err error) {
+	result := &TagWithValue{}
 
 	var values []string
 	for _, v := range strings.SplitN(strings.TrimSpace(tagValue), ":", 2) {
@@ -83,7 +83,7 @@ func getExpr(value string) (exprCode string, isExpr bool) {
 	return value, false
 }
 
-func getValueByWireTag(ctx context.Context, self any, tagValue *TagWithValue[WireValue], t reflect.Type) (any, error) {
+func getValueByWireTag(ctx context.Context, self any, tagValue *TagWithValue, t reflect.Type) (any, error) {
 	switch tagValue.Tag {
 	case WireValueSelf, WireValueAuto, WireValueType, WireValueName:
 		if (t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Struct) || t.Kind() == reflect.Interface {
@@ -165,9 +165,9 @@ func autoWireContext(ctx context.Context, self any) error {
 			}
 		}
 
-		var tv *TagWithValue[WireValue]
+		var tv *TagWithValue
 		if wireValue, ok := tags[TagWire.Name()]; ok {
-			tv, err = ParseTagValue(wireValue, func(tv *TagWithValue[WireValue]) {
+			tv, err = ParseTagValue(wireValue, func(tv *TagWithValue) {
 				if (tv.Tag == WireValueName && len(tv.Value) == 0) ||
 					(tv.Tag == WireValueAuto) {
 					tv.Value = structField.Name
@@ -175,7 +175,7 @@ func autoWireContext(ctx context.Context, self any) error {
 			})
 		}
 		if wireValue, ok := tags[TagValue.Name()]; ok {
-			tv = &TagWithValue[WireValue]{Tag: WireValueValue, Value: wireValue}
+			tv = &TagWithValue{Tag: WireValueValue, Value: wireValue}
 		}
 
 		if err != nil {
