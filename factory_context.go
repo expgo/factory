@@ -67,18 +67,19 @@ func (c *exprContext) setValue(name string, value any) {
 }
 
 func Find[T any]() *T {
-	return FindTimeout[T](Opts.Timeout)
+	return findTimeout(reflect.TypeOf((*T)(nil)), Opts.Timeout).(*T)
 }
 
 func FindTimeout[T any](timeout time.Duration) *T {
+	return findTimeout(reflect.TypeOf((*T)(nil)), timeout).(*T)
+}
 
-	vt := reflect.TypeOf((*T)(nil))
-
+func findTimeout(vt reflect.Type, timeout time.Duration) any {
 	result := _context.getByType(getTimeoutContext(timeout), vt)
 
 	resultType := reflect.TypeOf(result)
 	if resultType.Kind() == reflect.Ptr && resultType.ConvertibleTo(vt) {
-		return result.(*T)
+		return result
 	}
 
 	// panic
@@ -86,17 +87,19 @@ func FindTimeout[T any](timeout time.Duration) *T {
 }
 
 func FindByName[T any](name string) *T {
-	return FindByNameTimeout[T](name, Opts.Timeout)
+	return findByNameTimeout(reflect.TypeOf((*T)(nil)), name, Opts.Timeout).(*T)
 }
 
 func FindByNameTimeout[T any](name string, timeout time.Duration) *T {
-	vt := reflect.TypeOf((*T)(nil))
+	return findByNameTimeout(reflect.TypeOf((*T)(nil)), name, timeout).(*T)
+}
 
+func findByNameTimeout(vt reflect.Type, name string, timeout time.Duration) any {
 	result := _context.getByNamePanic(getTimeoutContext(timeout), name, vt)
 
 	resultType := reflect.TypeOf(result)
 	if resultType.Kind() == reflect.Ptr && resultType.ConvertibleTo(vt) {
-		return result.(*T)
+		return result
 	}
 
 	// panic
