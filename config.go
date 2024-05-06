@@ -75,11 +75,11 @@ func getContextTimeout(ctx context.Context) time.Duration {
 func pushGetter(ctx context.Context, ci *contextCachedItem) context.Context {
 	ciSetValue := ctx.Value(GetterKey)
 	if ciSetValue == nil {
-		ciSetValue = &setStack[*contextCachedItem]{}
+		ciSetValue = &setStack{}
 		ctx = context.WithValue(ctx, GetterKey, ciSetValue)
 	}
 
-	ciSet := ciSetValue.(*setStack[*contextCachedItem])
+	ciSet := ciSetValue.(*setStack)
 	if !ciSet.Push(ci) {
 		panic(fmt.Errorf("getting %s, possible circular reference with %s", ci._type.String(), lastGetter(ctx)))
 	}
@@ -89,7 +89,7 @@ func pushGetter(ctx context.Context, ci *contextCachedItem) context.Context {
 func popGetter(ctx context.Context) {
 	ciSetValue := ctx.Value(GetterKey)
 	if ciSetValue != nil {
-		ciSet := ciSetValue.(*setStack[*contextCachedItem])
+		ciSet := ciSetValue.(*setStack)
 		ciSet.Pop()
 	}
 }
@@ -97,26 +97,26 @@ func popGetter(ctx context.Context) {
 func lastGetter(ctx context.Context) string {
 	ciSetValue := ctx.Value(GetterKey)
 	if ciSetValue != nil {
-		ciSet := ciSetValue.(*setStack[*contextCachedItem])
+		ciSet := ciSetValue.(*setStack)
 		if last, ok := ciSet.Last(); ok {
-			return last._type.String()
+			return last.(*contextCachedItem)._type.String()
 		}
 	}
 	return ""
 }
 
 func initTypeCtx(ctx context.Context) context.Context {
-	return context.WithValue(ctx, TypeKey, &setStack[reflect.Type]{})
+	return context.WithValue(ctx, TypeKey, &setStack{})
 }
 
 func pushType(ctx context.Context, _type reflect.Type) context.Context {
 	typeSetValue := ctx.Value(TypeKey)
 	if typeSetValue == nil {
-		typeSetValue = &setStack[reflect.Type]{}
+		typeSetValue = &setStack{}
 		ctx = context.WithValue(ctx, TypeKey, typeSetValue)
 	}
 
-	typeSet := typeSetValue.(*setStack[reflect.Type])
+	typeSet := typeSetValue.(*setStack)
 	if !typeSet.Push(_type) {
 		panic(fmt.Errorf("getting %s, possible circular reference with %s", _type.String(), lastType(ctx)))
 	}
@@ -126,7 +126,7 @@ func pushType(ctx context.Context, _type reflect.Type) context.Context {
 func popType(ctx context.Context) {
 	typeSetValue := ctx.Value(TypeKey)
 	if typeSetValue != nil {
-		ciSet := typeSetValue.(*setStack[reflect.Type])
+		ciSet := typeSetValue.(*setStack)
 		ciSet.Pop()
 	}
 }
@@ -134,9 +134,9 @@ func popType(ctx context.Context) {
 func lastType(ctx context.Context) string {
 	typeSetValue := ctx.Value(TypeKey)
 	if typeSetValue != nil {
-		typeSet := typeSetValue.(*setStack[reflect.Type])
+		typeSet := typeSetValue.(*setStack)
 		if last, ok := typeSet.Last(); ok {
-			return last.String()
+			return last.(reflect.Type).String()
 		}
 	}
 	return ""

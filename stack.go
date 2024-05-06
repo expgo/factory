@@ -1,10 +1,10 @@
 package factory
 
-type setStack[T comparable] struct {
-	items []T
+type setStack struct {
+	items []any
 }
 
-func (s *setStack[T]) contains(item T) bool {
+func (s *setStack) contains(item any) bool {
 	for _, v := range s.items {
 		if v == item {
 			return true
@@ -13,7 +13,7 @@ func (s *setStack[T]) contains(item T) bool {
 	return false
 }
 
-func (s *setStack[T]) Push(item T) bool {
+func (s *setStack) Push(item any) bool {
 	if !s.contains(item) {
 		s.items = append(s.items, item)
 		return true
@@ -22,7 +22,7 @@ func (s *setStack[T]) Push(item T) bool {
 	return false
 }
 
-func (s *setStack[T]) Pop() (t T, b bool) {
+func (s *setStack) Pop() (t any, b bool) {
 	if len(s.items) == 0 {
 		return
 	}
@@ -31,7 +31,7 @@ func (s *setStack[T]) Pop() (t T, b bool) {
 	return item, true
 }
 
-func (s *setStack[T]) Last() (t T, b bool) {
+func (s *setStack) Last() (t any, b bool) {
 	if len(s.items) == 0 {
 		return t, false
 	}

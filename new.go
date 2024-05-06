@@ -129,7 +129,7 @@ func NewWithOptionTimeout[T any](option *Option, timeout time.Duration) *T {
 	newCtxMapLock.RUnlock()
 
 	if !loaded {
-		ctx = initTypeCtx(getNextTimeoutContext(ctx))
+		ctx = initTypeCtx(getTimeoutContext(timeout))
 
 		newCtxMapLock.Lock()
 		newCtxMap[goId] = ctx

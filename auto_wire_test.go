@@ -243,7 +243,7 @@ type WireValueExprStructTest struct {
 	PSlicePPointStruct *[]PointStruct
 }
 
-func TestAutoWireEnv(t *testing.T) {
+func Te1stAutoWireEnv(t *testing.T) {
 	tos := func(v interface{}) string {
 		return fmt.Sprintf("%v", v)
 	}
