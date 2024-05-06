@@ -73,55 +73,14 @@ func (o *Option) InitParams(initParams ...string) *Option {
 var newDefaultOption = NewOption()
 
 func New[T any]() *T {
-	return NewWithOption[T](newDefaultOption)
-}
-
-func NewTimeout[T any](timeout time.Duration) *T {
-	return NewWithOptionTimeout[T](newDefaultOption, timeout)
-}
-
-func _getMethodParams(ctx context.Context, self any, methodType reflect.Type, methodParams []string, methodName string) ([]reflect.Value, error) {
-	var params []reflect.Value
-
-	baseIndex := methodType.NumIn() - len(methodParams)
-
-	if len(methodParams) == 0 {
-		for i := 1; i < methodType.NumIn(); i++ {
-			paramType := methodType.In(i)
-			if (paramType.Kind() == reflect.Ptr && paramType.Elem().Kind() == reflect.Struct) || paramType.Kind() == reflect.Interface {
-				params = append(params, reflect.ValueOf(_context.getByType(ctx, paramType)))
-			} else {
-				return nil, fmt.Errorf("method %s's %d argument must be a struct point or an interface", methodName, i)
-			}
-		}
-	} else if baseIndex == 0 || baseIndex == 1 {
-		for i := 0; i < methodType.NumIn()-baseIndex; i++ {
-			paramType := methodType.In(i + baseIndex)
-
-			tagValue, err := ParseTagValue(methodParams[i], nil)
-			if err != nil {
-				return nil, fmt.Errorf("method %s's %d argument tag is err: %v", methodName, i+baseIndex, err)
-			}
-
-			v, err := getValueByWireTag(ctx, self, tagValue, paramType)
-			if err != nil {
-				return nil, fmt.Errorf("method %s's %d argument get value from tag err: %v", methodName, i+baseIndex, err)
-			}
-
-			params = append(params, reflect.ValueOf(v))
-		}
-	} else {
-		return nil, errors.New("init params count must equals with method params count")
-	}
-
-	return params, nil
+	return initWithOptionTimeout(new(T), newDefaultOption, Opts.Timeout).(*T)
 }
 
 func NewWithOption[T any](option *Option) *T {
-	return NewWithOptionTimeout[T](option, Opts.Timeout)
+	return initWithOptionTimeout(new(T), option, Opts.Timeout).(*T)
 }
 
-func NewWithOptionTimeout[T any](option *Option, timeout time.Duration) *T {
+func initWithOptionTimeout(t any, option *Option, timeout time.Duration) any {
 	goId := sync.GoId()
 	newCtxMapLock.RLock()
 
@@ -142,15 +101,13 @@ func NewWithOptionTimeout[T any](option *Option, timeout time.Duration) *T {
 		}()
 	}
 
-	return newWithOptionContext[T](ctx, option)
+	return initWithOptionContext(t, ctx, option)
 }
 
-func newWithOptionContext[T any](ctx context.Context, option *Option) *T {
+func initWithOptionContext(t any, ctx context.Context, option *Option) any {
 	if option == nil {
 		option = newDefaultOption
 	}
-
-	t := new(T)
 
 	vt := reflect.TypeOf(t)
 	ctx = pushType(ctx, vt)
@@ -195,4 +152,41 @@ func newWithOptionContext[T any](ctx context.Context, option *Option) *T {
 	}
 
 	return t
+}
+
+func _getMethodParams(ctx context.Context, self any, methodType reflect.Type, methodParams []string, methodName string) ([]reflect.Value, error) {
+	var params []reflect.Value
+
+	baseIndex := methodType.NumIn() - len(methodParams)
+
+	if len(methodParams) == 0 {
+		for i := 1; i < methodType.NumIn(); i++ {
+			paramType := methodType.In(i)
+			if (paramType.Kind() == reflect.Ptr && paramType.Elem().Kind() == reflect.Struct) || paramType.Kind() == reflect.Interface {
+				params = append(params, reflect.ValueOf(_context.getByType(ctx, paramType)))
+			} else {
+				return nil, fmt.Errorf("method %s's %d argument must be a struct point or an interface", methodName, i)
+			}
+		}
+	} else if baseIndex == 0 || baseIndex == 1 {
+		for i := 0; i < methodType.NumIn()-baseIndex; i++ {
+			paramType := methodType.In(i + baseIndex)
+
+			tagValue, err := ParseTagValue(methodParams[i], nil)
+			if err != nil {
+				return nil, fmt.Errorf("method %s's %d argument tag is err: %v", methodName, i+baseIndex, err)
+			}
+
+			v, err := getValueByWireTag(ctx, self, tagValue, paramType)
+			if err != nil {
+				return nil, fmt.Errorf("method %s's %d argument get value from tag err: %v", methodName, i+baseIndex, err)
+			}
+
+			params = append(params, reflect.ValueOf(v))
+		}
+	} else {
+		return nil, errors.New("init params count must equals with method params count")
+	}
+
+	return params, nil
 }

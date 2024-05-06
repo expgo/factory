@@ -123,7 +123,7 @@ func (s *singleton[T]) getWithContext(ctx context.Context) *T {
 		if s.initFunc != nil {
 			s.obj = s.initFunc()
 		} else {
-			s.obj = newWithOptionContext[T](getNextTimeoutContext(ctx), &s.option)
+			s.obj = initWithOptionContext(new(T), getNextTimeoutContext(ctx), &s.option).(*T)
 		}
 
 		return nil
