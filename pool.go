@@ -1,27 +1,35 @@
 package factory
 
 import (
-	"github.com/expgo/generic"
 	"reflect"
 	"sync"
 )
 
-var _poolCache = generic.Cache[reflect.Type, *sync.Pool]{}
-var _poolCacheLock = sync.RWMutex{}
+var _poolCache = map[reflect.Type]*sync.Pool{}
+var _poolCacheLock = &sync.RWMutex{}
+
+func getPoolByType(vt reflect.Type) *sync.Pool {
+	_poolCacheLock.RLock()
+	pool, ok := _poolCache[vt]
+	_poolCacheLock.RUnlock()
+
+	if !ok {
+		pool = &sync.Pool{
+			New: func() interface{} {
+				return initWithOptionTimeout(reflect.New(vt).Interface(), newDefaultOption, Opts.Timeout)
+			},
+		}
+
+		_poolCacheLock.Lock()
+		_poolCache[vt] = pool
+		_poolCacheLock.Unlock()
+	}
+
+	return pool
+}
 
 func Get[T any]() *T {
-	_poolCacheLock.RLock()
-	defer _poolCacheLock.RUnlock()
-
-	poolType := reflect.TypeOf((*T)(nil)).Elem()
-	pool, _ := _poolCache.GetOrLoad(poolType, func(_ reflect.Type) (*sync.Pool, error) {
-		return &sync.Pool{
-			New: func() interface{} {
-				return New[T]()
-			},
-		}, nil
-	})
-	return pool.Get().(*T)
+	return getPoolByType(reflect.TypeOf((*T)(nil)).Elem()).Get().(*T)
 }
 
 func Put[T any](t *T) {
@@ -29,29 +37,22 @@ func Put[T any](t *T) {
 		return
 	}
 
-	_poolCacheLock.RLock()
-	defer _poolCacheLock.RUnlock()
-
-	poolType := reflect.TypeOf((*T)(nil)).Elem()
-	pool, _ := _poolCache.GetOrLoad(poolType, func(_ reflect.Type) (*sync.Pool, error) {
-		return &sync.Pool{
-			New: func() interface{} {
-				return New[T]()
-			},
-		}, nil
-	})
-	pool.Put(t)
+	getPoolByType(reflect.TypeOf((*T)(nil)).Elem()).Put(t)
 }
 
-//func SetPoolInit[T any](option *Option) {
-//	_poolCacheLock.Lock()
-//	defer _poolCacheLock.Unlock()
-//
-//	poolType := reflect.TypeOf((*T)(nil)).Elem()
-//	_poolCache.Evict(poolType)
-//	_poolCache.Set(poolType, &sync.Pool{
-//		New: func() interface{} {
-//			return NewWithOption[T](option)
-//		},
-//	})
-//}
+func SetPoolInit[T any](option *Option) {
+	setPoolInitWithType(reflect.TypeOf((*T)(nil)).Elem(), option)
+}
+
+func setPoolInitWithType(vt reflect.Type, option *Option) {
+	pool := &sync.Pool{
+		New: func() interface{} {
+			return initWithOptionTimeout(reflect.New(vt).Interface(), option, Opts.Timeout)
+		},
+	}
+
+	_poolCacheLock.Lock()
+	defer _poolCacheLock.Unlock()
+
+	_poolCache[vt] = pool
+}

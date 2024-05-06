@@ -1,7 +1,6 @@
 package factory
 
 import (
-	"github.com/expgo/generic"
 	"github.com/stretchr/testify/assert"
 	"reflect"
 	"sync"
@@ -60,7 +59,7 @@ func TestPut(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			// cleanup pool
-			_poolCache = generic.Cache[reflect.Type, *sync.Pool]{}
+			_poolCache = map[reflect.Type]*sync.Pool{}
 
 			Put(test.input)
 
