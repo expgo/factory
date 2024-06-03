@@ -4,10 +4,10 @@ github.com/expgo/ag v0.0.0-20240507032547-4b7e9b00453b h1:BmpD9kdbD3PXFek56TGblh
 github.com/expgo/ag v0.0.0-20240507032547-4b7e9b00453b/go.mod h1:k5D7NPJMbWZLV5i7tZ9hc9429gEXqQxpdAI6T2euiBM=
 github.com/expgo/structure v0.0.0-20240515010801-898cf0e94ad3 h1:zDRvZjuqnMHH4daSbC/vO7ESOg6FhCgS2BMWH1cZs6c=
 github.com/expgo/structure v0.0.0-20240515010801-898cf0e94ad3/go.mod h1:tsjqeBHjL+mbqq0OtKdvEqGXAlZpSCzJjFipV9gW/QI=
-github.com/expgo/sync v0.0.0-20240416034417-7c4de7477076 h1:uLKBth5y/qhVR+rtKzdhCHFJRPJ8LENkc/f4LjJeOKk=
-github.com/expgo/sync v0.0.0-20240416034417-7c4de7477076/go.mod h1:xsnlCFzkJVsSErRFz2usJhsbY6p6txA7L/rj2XgWyNI=
-github.com/expr-lang/expr v1.16.5 h1:m2hvtguFeVaVNTHj8L7BoAyt7O0PAIBaSVbjdHgRXMs=
-github.com/expr-lang/expr v1.16.5/go.mod h1:uCkhfG+x7fcZ5A5sXHKuQ07jGZRl6J0FCAaf2k4PtVQ=
+github.com/expgo/sync v0.0.0-20240603063239-cda8f6ce3df9 h1:89kRo0xjCTH9N5YhyiHvcmr9H9C5uIkKMRecxDUlVDQ=
+github.com/expgo/sync v0.0.0-20240603063239-cda8f6ce3df9/go.mod h1:wnF7YTsjdtzdbp2kqXh9zlMGq9XkmQ2iC3uC8JkRx8M=
+github.com/expr-lang/expr v1.16.9 h1:WUAzmR0JNI9JCiF0/ewwHB1gmcGw5wW7nWt8gc6PpCI=
+github.com/expr-lang/expr v1.16.9/go.mod h1:8/vRC7+7HBzESEqt5kKpYXxrxkr31SaO8r40VO/1IT4=
 github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5/go.mod h1:jvVRKCrJTQWu0XVbaOlby/2lO20uSCHEMzzplHXte1o=
 github.com/petermattis/goid v0.0.0-20240503122002-4b96552b8156 h1:UOk0WKXxKXmHSlIkwQNhT5AWlMtkijU5pfj8bCOI9vQ=
 github.com/petermattis/goid v0.0.0-20240503122002-4b96552b8156/go.mod h1:pxMtw7cyUw6B2bRH0ZBANSPg+AoSud1I1iyJHI69jH4=
