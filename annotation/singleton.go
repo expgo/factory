@@ -19,7 +19,11 @@ type Singleton struct {
 
 func (s *Singleton) WriteString(buf io.StringWriter) error {
 	if s.LocalGetter {
-		buf.WriteString(fmt.Sprintf("%s%s = factory.Getter[%s](", s.LocalPrefix, s.typeName, s.typeName))
+		if len(s.Name) > 0 {
+			buf.WriteString(fmt.Sprintf("%s%s_%s = factory.Getter[%s](", s.LocalPrefix, s.typeName, s.Name, s.typeName))
+		} else {
+			buf.WriteString(fmt.Sprintf("%s%s = factory.Getter[%s](", s.LocalPrefix, s.typeName, s.typeName))
+		}
 	}
 
 	if s.NamedOnly {
