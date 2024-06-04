@@ -10,7 +10,6 @@ type Singleton struct {
 	Name           string
 	NamedOnly      bool   `value:"false"`
 	UseConstructor bool   `value:"false"`
-	LazyInit       bool   `value:"true"`
 	LocalGetter    bool   `value:"false"`
 	LocalPrefix    string `value:"__"`
 	InitMethod     string
