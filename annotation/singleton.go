@@ -7,23 +7,29 @@ import (
 )
 
 type Singleton struct {
-	Name           string
-	NamedOnly      bool   `value:"false"`
-	UseConstructor bool   `value:"false"`
-	LocalGetter    bool   `value:"false"`
-	LocalPrefix    string `value:"__"`
-	InitMethod     string
-	Init           []string
-	typeName       string
+	Name            string
+	NamedOnly       bool   `value:"false"`
+	UseConstructor  bool   `value:"false"`
+	LocalGetter     bool   `value:"false"`
+	LocalPrefix     string `value:"__"`
+	LocalGetterName string
+	InitMethod      string
+	Init            []string
+	typeName        string
 }
 
 func (s *Singleton) WriteString(buf io.StringWriter) error {
 	if s.LocalGetter {
-		if len(s.Name) > 0 {
-			buf.WriteString(fmt.Sprintf("%s%s_%s = factory.Getter[%s](", s.LocalPrefix, s.typeName, s.Name, s.typeName))
+		localGetterName := ""
+		if len(s.LocalGetterName) > 0 {
+			localGetterName = s.LocalGetterName
+		} else if len(s.Name) > 0 {
+			localGetterName = fmt.Sprintf("%s%s_%s", s.LocalPrefix, s.typeName, s.Name)
 		} else {
-			buf.WriteString(fmt.Sprintf("%s%s = factory.Getter[%s](", s.LocalPrefix, s.typeName, s.typeName))
+			localGetterName = fmt.Sprintf("%s%s", s.LocalPrefix, s.typeName)
 		}
+
+		buf.WriteString(fmt.Sprintf("%s = factory.Getter[%s](", localGetterName, s.typeName))
 	}
 
 	if s.NamedOnly {
