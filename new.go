@@ -76,6 +76,14 @@ func New[T any]() *T {
 	return initWithOptionTimeout(new(T), newDefaultOption, Opts.Timeout).(*T)
 }
 
+func NewWithFunc[T any](f func() *T) *T {
+	return initWithOptionTimeout(f(), newDefaultOption, Opts.Timeout).(*T)
+}
+
+func NewWithFuncAndOption[T any](f func() *T, option *Option) *T {
+	return initWithOptionTimeout(f(), option, Opts.Timeout).(*T)
+}
+
 func NewWithOption[T any](option *Option) *T {
 	return initWithOptionTimeout(new(T), option, Opts.Timeout).(*T)
 }
