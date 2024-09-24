@@ -73,22 +73,24 @@ func (o *Option) InitParams(initParams ...string) *Option {
 var newDefaultOption = NewOption()
 
 func New[T any]() *T {
-	return initWithOptionTimeout(new(T), newDefaultOption, Opts.Timeout).(*T)
-}
-
-func NewWithFunc[T any](f func() *T) *T {
-	return initWithOptionTimeout(f(), newDefaultOption, Opts.Timeout).(*T)
-}
-
-func NewWithFuncAndOption[T any](f func() *T, option *Option) *T {
-	return initWithOptionTimeout(f(), option, Opts.Timeout).(*T)
+	return initWithOptionTimeout(new(T), newDefaultOption, Opts.Timeout, nil).(*T)
 }
 
 func NewWithOption[T any](option *Option) *T {
-	return initWithOptionTimeout(new(T), option, Opts.Timeout).(*T)
+	return initWithOptionTimeout(new(T), option, Opts.Timeout, nil).(*T)
 }
 
-func initWithOptionTimeout(t any, option *Option, timeout time.Duration) any {
+func NewBeforeInit[T any](f func(*T)) *T {
+	t := new(T)
+	return initWithOptionTimeout(t, newDefaultOption, Opts.Timeout, func() { f(t) }).(*T)
+}
+
+func NewBeforeInitOption[T any](f func(*T), option *Option) *T {
+	t := new(T)
+	return initWithOptionTimeout(t, option, Opts.Timeout, func() { f(t) }).(*T)
+}
+
+func initWithOptionTimeout(t any, option *Option, timeout time.Duration, beforeInit func()) any {
 	goId := sync.GoId()
 	newCtxMapLock.RLock()
 
@@ -109,10 +111,10 @@ func initWithOptionTimeout(t any, option *Option, timeout time.Duration) any {
 		}()
 	}
 
-	return initWithOptionContext(t, ctx, option)
+	return initWithOptionContext(t, ctx, option, beforeInit)
 }
 
-func initWithOptionContext(t any, ctx context.Context, option *Option) any {
+func initWithOptionContext(t any, ctx context.Context, option *Option, beforeInit func()) any {
 	if option == nil {
 		option = newDefaultOption
 	}
@@ -145,6 +147,7 @@ func initWithOptionContext(t any, ctx context.Context, option *Option) any {
 
 			params, err := _getMethodParams(ctx, t, initMethod.Type, option.initParams, initMethod.Name)
 			if err == nil {
+				// defer 将init的调用放到auto wire之后
 				defer initMethod.Func.Call(append([]reflect.Value{reflect.ValueOf(t)}, params...))
 			} else {
 				panic(fmt.Errorf("create %s error: %v", vte.Name(), err))
@@ -157,6 +160,10 @@ func initWithOptionContext(t any, ctx context.Context, option *Option) any {
 	// do auto wire
 	if err := autoWireContext(ctx, t); err != nil {
 		panic(fmt.Errorf("create %s error: %v", vt.Elem().Name(), err))
+	}
+
+	if beforeInit != nil {
+		beforeInit()
 	}
 
 	return t

@@ -145,7 +145,7 @@ func autoWireContext(ctx context.Context, self any) error {
 
 	return structure.WalkWithTagNames(self, []string{TagWire.Name(), TagValue.Name(), TagNew.Name()}, func(fieldValue reflect.Value, structField reflect.StructField, rootValues []reflect.Value, tags map[string]string) (err error) {
 		if len(tags) > 1 {
-			panic("Only one can exist at a time, either 'wire' or 'value'.")
+			panic("Only one can exist at a time, either 'wire', 'value' or 'new'.")
 		}
 
 		if newValue, ok := tags[TagNew.Name()]; ok {
