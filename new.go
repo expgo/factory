@@ -80,14 +80,36 @@ func NewWithOption[T any](option *Option) *T {
 	return initWithOptionTimeout(new(T), option, Opts.Timeout, nil).(*T)
 }
 
-func NewBeforeInit[T any](f func(*T)) *T {
-	t := new(T)
-	return initWithOptionTimeout(t, newDefaultOption, Opts.Timeout, func() { f(t) }).(*T)
+func NewWithFunc[T any](createFunc func() *T, beforeInit func(*T)) *T {
+	return NewWithFuncOption[T](createFunc, beforeInit, newDefaultOption)
 }
 
-func NewBeforeInitOption[T any](f func(*T), option *Option) *T {
+func NewWithFuncOption[T any](createFunc func() *T, beforeInit func(*T), option *Option) *T {
+	var t *T
+	if createFunc != nil {
+		t = createFunc()
+	} else {
+		t = new(T)
+	}
+
+	return initWithOptionTimeout(t, option, Opts.Timeout, func() {
+		if beforeInit != nil {
+			beforeInit(t)
+		}
+	}).(*T)
+}
+
+func NewBeforeInit[T any](beforeInit func(*T)) *T {
+	return NewBeforeInitOption(beforeInit, newDefaultOption)
+}
+
+func NewBeforeInitOption[T any](beforeInit func(*T), option *Option) *T {
 	t := new(T)
-	return initWithOptionTimeout(t, option, Opts.Timeout, func() { f(t) }).(*T)
+	return initWithOptionTimeout(t, option, Opts.Timeout, func() {
+		if beforeInit != nil {
+			beforeInit(t)
+		}
+	}).(*T)
 }
 
 func initWithOptionTimeout(t any, option *Option, timeout time.Duration, beforeInit func()) any {
