@@ -16,7 +16,7 @@ func getPoolByType(vt reflect.Type) *sync.Pool {
 	if !ok {
 		pool = &sync.Pool{
 			New: func() interface{} {
-				return initWithOptionTimeout(reflect.New(vt).Interface(), newDefaultOption, Opts.Timeout)
+				return initWithOptionTimeout(reflect.New(vt).Interface(), newDefaultOption, Opts.Timeout, nil)
 			},
 		}
 
@@ -47,7 +47,7 @@ func SetPoolInit[T any](option *Option) {
 func setPoolInitWithType(vt reflect.Type, option *Option) {
 	pool := &sync.Pool{
 		New: func() interface{} {
-			return initWithOptionTimeout(reflect.New(vt).Interface(), option, Opts.Timeout)
+			return initWithOptionTimeout(reflect.New(vt).Interface(), option, Opts.Timeout, nil)
 		},
 	}
 
